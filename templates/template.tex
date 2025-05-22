@@ -1,0 +1,54 @@
+\documentclass[uplatex]{jsarticle}
+
+%% Packages
+\usepackage[dvipdfmx]{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Title
+\title{タイトル}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\section{概要}
+
+\section{手法}
+\cite{mypaper}すごい
+\section{実験}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{img/image.png}
+  \caption{キャプション}
+  \label{fig:template}
+\end{figure}
+
+\section{感想}
+\ref{fig:template}のように図を引用することができる．
+
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
