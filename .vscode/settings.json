@@ -3,15 +3,12 @@
         "editor.suggest.snippetsPreventQuickSuggestions": false,
         "editor.tabSize": 2
     },
-
     "[latex]": {
         "editor.tabSize": 2
     },
-
     "[bibtex]": {
         "editor.tabSize": 2
     },
-
     "latex-workshop.intellisense.package.enabled": true,
     "latex-workshop.latex.clean.fileTypes": [
         "*.aux",
@@ -38,9 +35,7 @@
         "*.dvi",
         "*.synctex.gz"
     ],
-
     "latex-workshop.latex.outDir": "out",
-
     "latex-workshop.latex.recipes": [
         {
             "name": "latexmk",
@@ -49,7 +44,6 @@
             ]
         },
     ],
-
     "latex-workshop.latex.tools": [
         {
             "name": "latexmk",
