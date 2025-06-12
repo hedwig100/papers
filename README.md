@@ -8,3 +8,8 @@
 
 - [Break the Sequential Dependency of LLM Inference Using
 LOOKAHEAD DECODING](llm/lookahead_decoding.pdf)
+
+## DB
+
+- [An Empirical Evaluation of Columnar Storage
+Formats](db/columnar_storage_formats.pdf)
