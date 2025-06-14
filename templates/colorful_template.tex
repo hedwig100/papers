@@ -1,7 +1,7 @@
-\documentclass[uplatex]{jsarticle}
+\documentclass[dvipdfmx,uplatex]{jsarticle}
 
 %% Packages
-\usepackage[dvipdfmx]{graphicx,color,hyperref}
+\usepackage{graphicx,color,hyperref}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{url}
@@ -25,6 +25,14 @@
 \newtheorem{requirement}{条件}
 
 %% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
 \newenvironment{method}[1]{
     \begin{tcolorbox}[
         colframe=green!50!black,
@@ -51,8 +59,19 @@
     \end{tcolorbox}
 }
 
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
 %% Title
-\title{タイトル}
+\title{Attention Is All You Need}
 \author{\empty}
 \date{\empty}
 
@@ -61,26 +80,64 @@
 \maketitle
 
 \begin{itemize}
-    \item Link: \url{https://dl.acm.org/doi/10.5555/3692070.3692631}
-    \item Conference: ICML2024
+    \item Link: \url{https://arxiv.org/abs/1706.03762}
+    \item Conference:
+    \item Citation: \cite{attention_is_all_you_need}
+    \item Arxiv: \url{https://arxiv.org/abs/1706.03762}
 \end{itemize}
 
 \section{概要}
-\begin{tcolorbox}[fonttitle=\bfseries]
-ここに概要を書く
-\end{tcolorbox}
+\begin{simplebox}
+\begin{itemize}
+    \item 概要A
+    \item 概要B
+\end{itemize}
+\end{simplebox}
+
+\section{背景}
+\begin{simplebox}
+\begin{itemize}
+    \item 背景A
+    \item 背景B
+\end{itemize}
+\end{simplebox}
 
 \section{手法}
-\begin{method}{手法1}
-\begin{align*}
-    1 + 1 = 2
-\end{align*}
+\begin{method}{Jacobi Decoding}
+\begin{itemize}
+    \item 説明A
+    \item 説明B
+\end{itemize}
 \end{method}
 
-\section{実験}
-\begin{experiment}{実験1}
-\ref{fig:template}のように図を引用することができる．
+\begin{method}{Lookahead Decoding}
+\begin{itemize}
+    \item 説明A
+    \item \cite{attention_is_all_you_need}のように引用できる.
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item 手法A.
+\end{itemize}
 \end{experiment}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item 結果A
+    \item 結果B
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item 感想A
+  \item \ref{fig:template}のように図を引用することができる.
+\end{itemize}
+\end{kansou}
 
 \begin{figure}
     \centering
@@ -88,19 +145,6 @@
     \caption{キャプション}
     \label{fig:template}
 \end{figure}
-
-\section{感想}
-\begin{tcolorbox}[colframe=brown,
-  colback=brown!10!white,
-  colbacktitle=brown!40!white,
-  coltitle=black,fonttitle=\bfseries]
-\cite{mypaper}すごい
-\end{tcolorbox}
-
-\section{MEMO}
-ここはコンパイルするときにコメントアウトする！！
-TODO: notionと同じ構造でこのtexファイルを持てるようにしたい, url, 著者, 分野とか.
-
 
 \bibliographystyle{jplain}
 \bibliography{template.bib}

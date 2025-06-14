@@ -1,0 +1,87 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Title
+\title{Attention Is All You Need}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://arxiv.org/abs/1706.03762}
+    \item Conference: 
+    \item Citation: \cite{attention_is_all_you_need}
+    \item Arxiv: \url{https://arxiv.org/abs/1706.03762}
+\end{itemize}
+
+\section{概要}
+\begin{itemize}
+  \item 概要A
+  \item 概要B 
+\end{itemize}
+
+\section{背景}
+\begin{itemize}
+    \item 背景A
+    \item 背景B
+\end{itemize}
+
+\section{手法}
+\begin{itemize}
+    \item 手法A.
+    \item \cite{attention_is_all_you_need}のように引用できる.
+\end{itemize}
+
+\section{実験}
+\subsection{実験手法}
+\begin{itemize}
+  \item 手法A.
+\end{itemize}
+
+\subsection{実験結果}
+\begin{itemize}
+    \item 結果A
+    \item 結果B
+\end{itemize}
+
+\section{感想}
+\begin{itemize}
+  \item 感想A
+  \item \ref{fig:template}のように図を引用することができる.
+\end{itemize}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{img/image.png}
+  \caption{キャプション}
+  \label{fig:template}
+\end{figure}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
