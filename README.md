@@ -20,6 +20,8 @@
 - 現状`template.tex`もしくは`colorful_template.tex`をコピーして、新しいファイルを作って書いてます.
 - 論文のpdfも一緒にレポジトリに入れています.
 
+- 一応`./prepare.sh [-c] <dir>/<filename>`とすると`<dir>`ディレクトリを勝手に作ってくれて、`<filename>.tex, img/<filename>/`を作成するスクリプト`prepare.sh`もあります.
+
 ## Papers
 
 [論文情報まとめたNotionページへのリンク](https://alive-tablecloth-bd3.notion.site/1dd66bd63a2d801ca424ec2170d1ed9d)
