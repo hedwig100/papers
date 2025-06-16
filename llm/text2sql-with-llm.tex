@@ -71,7 +71,8 @@
 }
 
 %% Title
-\title{Attention Is All You Need}
+\title{Text-to-SQL Empowered by Large Language Models: A
+Benchmark Evaluation}
 \author{\empty}
 \date{\empty}
 
@@ -80,7 +81,7 @@
 \maketitle
 
 \begin{itemize}
-    \item Link: \url{https://arxiv.org/abs/2308.15363}
+    \item Link: \url{https://dl.acm.org/doi/10.14778/3641204.3641221}
     \item Conference:
     \item Citation: \cite{text2sql_benchmark}
     \item Arxiv: \url{https://arxiv.org/abs/2308.15363}
@@ -96,6 +97,10 @@
 \end{itemize}
 \end{simplebox}
 
+%% Text-to-SQLは、自然言語で書かれた質問をSQLクエリに変換する技術である。
+%% 近年、LLMの発展により、Text-to-SQLの精度が向上している。
+%% 本研究では、Text-to-SQLの性能を評価するためのベンチマークを提案し、様々なLLMを用いた実験を行った。
+
 \section{背景}
 \begin{simplebox}
 \begin{itemize}
@@ -104,18 +109,52 @@
 \end{itemize}
 \end{simplebox}
 
+% 自然言語での質問と関連する情報を表現するプロセスのことを質問表現(Question Representation)とよぶ。
+% インコンテキストラーニング: プロンプト学習。
+% 教師ありファインチューニングでその性能をより向上させられることが知られている。
+
 \section{手法}
-\begin{method}{Jacobi Decoding}
+\begin{method}{Question Representation}
 \begin{itemize}
-    \item 説明A
-    \item 説明B
+    \item このプロセスは今聞きたい質問$q$に対して, 期待する応答が得られるようなゼロショットのプロンプトを作ることを目的とする.
+    \item 5つの主要な方法がある.
+    \item これらの手法はこれまで異なるLLMやデータセットで評価されてきたため、きちんとした比較がされてこなかった。
 \end{itemize}
 \end{method}
 
-\begin{method}{Lookahead Decoding}
+\begin{method}{In-Context Learning}
 \begin{itemize}
-    \item 説明A
-    \item \cite{attention_is_all_you_need}のように引用できる.
+    \item 「Zero-shotのプロンプト+例となるようなSQLクエリ」を与えることで、LLMが自然言語の質問に対してSQLクエリを生成するように学習させる手法をここでは考える.
+    \item このSQLクエリの1. 選び方, 2. 作り方を変化させる
+    \item 選び方
+    \begin{itemize}
+        \item Random: 候補から$k$こランダムに選ぶ.
+        \item Question Similarity Selection (QTS${}_S$): 質問と類似した質問を言語モデルによるベクトル化とベクトル検索を用いて選ぶ.
+        \item Masked Question Similarity Selection (MQS${}_S$): テーブル名、列名などドメイン特有の情報をマスクした状態で質問をベクトル化して類似したベクトルを選ぶ.
+        \item Query Similarity Selection (QRS${}_S$): 一度ほかの言語モデルでSQLクエリを生成し、それに近いSQLクエリを選ぶ.
+    \end{itemize}
+    \item 作り方
+    \begin{itemize}
+        \item Full-information Organization (FI${}_O$): 質問と同じフォーマットで、クエリ例を与える.
+        \item SQL-Only Organization (SO${}_O$): SQLクエリのみを表示する.
+    \end{itemize}
+    \item 上の手法を組み合わせてDAIL-SQLという手法を提案する.
+    \item DAIL Selection 
+    \begin{itemize}
+        \item MSQ${}_S$, QRS${}_S$をいずれもつかい、質問に対して類似したSQLクエリを$k$個選ぶ.
+    \end{itemize}
+    \item DAIL Organization
+    \begin{itemize}
+        \item トークン効率と精度を考慮してFI${}_O$とSO${}_O$を組み合わせる.
+        \item 具体的には, 質問と対応するSQLクエリのペアを与えるのみで, テーブルスキーマを与えない.
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{Supervised Fine-tuning}
+\begin{itemize}
+    \item 上の章で準備したクエリとその期待する応答を用いて、LLMをファインチューニングする.
+    \item これは今まで検討されていなかったが、Text-to-SQLタスクにおける, LLMの性能を向上させる可能性がある.
 \end{itemize}
 \end{method}
 
