@@ -29,6 +29,8 @@
 ### LLM
 - [Break the Sequential Dependency of LLM Inference Using
 LOOKAHEAD DECODING](llm/lookahead_decoding.pdf)
+- [Text-to-SQL Empowered by Large Language Models: A
+Benchmark Evaluation](llm/text2sql-with-llm.pdf)
 
 ### DB
 - [An Empirical Evaluation of Columnar Storage
