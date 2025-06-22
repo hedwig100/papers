@@ -71,46 +71,73 @@
 }
 
 %% Title
-\title{Attention Is All You Need}
+\title{Combining Small Language Models and Large Language Models for Zero-Shot NL2SQL}
 \author{\empty}
 \date{\empty}
+
+% https://gemini.google.com/app/b5ad0b088f9ba5db
 
 %% Document body
 \begin{document}
 \maketitle
 
 \begin{itemize}
-    \item Link: \url{https://arxiv.org/abs/1706.03762}
-    \item Conference:
-    \item Citation: \cite{attention_is_all_you_need}
-    \item Arxiv: \url{https://arxiv.org/abs/1706.03762}
+    \item Link: \url{https://www.vldb.org/pvldb/vol17/p2750-fan.pdf}
+    \item Conference: VLDB2024
+    \item Citation: \cite{text2sql_with_slm_and_llm}
+    \item Arxiv: \url{https://www.vldb.org/pvldb/vol17/p2750-fan.pdf}
 \end{itemize}
 
 \section{概要}
 \begin{simplebox}
 \begin{itemize}
-    \item 概要A
-    \item 概要B
+    \item SLMとLLMを組み合わせて、Zero-ShotなNL2SQLを実現する手法を提案.
+    \item SLMは、SQLスケッチを生成し、LLMがスケッチ中の情報を埋めることで、SQLクエリを生成する。
+    \item この手法はZero-ShotなNL2SQL手法のこれまでのSOTAを上回る性能を示す。
 \end{itemize}
 \end{simplebox}
 
 \section{背景}
 \begin{simplebox}
 \begin{itemize}
-    \item 背景A
-    \item 背景B
+    \item この論文でいうZeroShotなNL2SQLとは、今対象としているデータベースに対するSQLクエリをプロンプトに含めない状態で、自然言語からSQLクエリを生成することを指す。
+    \item 全く新しいデータベースに対するクエリを発行するときには、ZeroShotなNL2SQLが必要となる。
+    \item SLMは、多くのNL2SQLサンプルで学習させることで、正確なSQLクエリを生成することができるが、自然言語から情報を取り出して推論することが難しい。
+    \item LLMは自然言語の推論が得意であるが、正確なスキーマに基づくSQLクエリを生成するのが難しい。
+    \item よってSLMにSQLの構文のみ生成させ、残りの自然言語から情報を取り出す部分をLLMに任せることで、正確なSQLを生成する。イメージは図\ref{fig:overview}の通りである。
 \end{itemize}
 \end{simplebox}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/text2sql-with-slm-and-llm/overview.png}
+    \caption{提案手法の概要}
+    \label{fig:overview}
+\end{figure}
+
 \section{手法}
-\begin{method}{Jacobi Decoding}
+\begin{method}{Overview}
+\begin{enumerate}
+    \item SLMがSQLスケッチを生成する、SQLスケッチは以下の情報で構成される。
+    \begin{itemize}
+        \item SELECT: 取得するカラム名
+        \item FROM: 対象テーブル名
+        \item Keywords: ORDER BY, GROUP BY, WHEREなどSQLに使われるキーワード、またSELECTなどサブクエリに使われるキーワードも含む。
+    \end{itemize}
+    \item LLMがSQLスケッチを受け取り、スケッチ中の情報を埋めることで、SQLクエリを生成する。
+\end{enumerate}
+\end{method}
+
+\begin{method}{SQLスケッチの生成}
 \begin{itemize}
-    \item 説明A
-    \item 説明B
+    \item ここではSLMによるSQLスケッチの生成について説明する。
+    \item SLMは、自然言語の質問とスキーマ情報を入力として、SQLスケッチを生成する。ただこれまでの手法で質問に含まれるカラム情報からカラムを選ぶことが多く、スキーマ情報が活用されていなかったため、次のようなエンコードをすることでスキーマ情報を活用する。
+    \item 情報は次のようにエンコードされる: [INS] \textless question \textgreater : [Q] \textless database \textgreater : t0: \textless table0 \textgreater (c0: \textless column0 \textgreater , c1: \textless column1 \textgreater , ...), t1: \textless table1 \textgreater (c0: \textless column0 \textgreater , c1: \textless column1 \textgreater , ...), ... 
+    \item このようにエンコードして、SELECT t0.c2のようにSQLスケッチを生成する。
 \end{itemize}
 \end{method}
 
-\begin{method}{Lookahead Decoding}
+\begin{method}{SQLクエリの補完と修正}
 \begin{itemize}
     \item 説明A
     \item \cite{attention_is_all_you_need}のように引用できる.
@@ -139,12 +166,12 @@
 \end{itemize}
 \end{kansou}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=0.5\textwidth]{img/image.png}
-    \caption{キャプション}
-    \label{fig:template}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.5\textwidth]{img/image.png}
+%     \caption{キャプション}
+%     \label{fig:template}
+% \end{figure}
 
 \bibliographystyle{jplain}
 \bibliography{template.bib}
