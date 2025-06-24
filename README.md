@@ -31,6 +31,8 @@
 LOOKAHEAD DECODING](llm/lookahead_decoding.pdf)
 - [Text-to-SQL Empowered by Large Language Models: A
 Benchmark Evaluation](llm/text2sql-with-llm.pdf)
+- [Combining Small Language Models and Large Language Models
+for Zero-Shot NL2SQL](llm/text2sql-with-slm-and-llm.pdf)
 
 ### DB
 - [An Empirical Evaluation of Columnar Storage
