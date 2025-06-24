@@ -133,36 +133,81 @@
     \item ここではSLMによるSQLスケッチの生成について説明する。
     \item SLMは、自然言語の質問とスキーマ情報を入力として、SQLスケッチを生成する。ただこれまでの手法で質問に含まれるカラム情報からカラムを選ぶことが多く、スキーマ情報が活用されていなかったため、次のようなエンコードをすることでスキーマ情報を活用する。
     \item 情報は次のようにエンコードされる: [INS] \textless question \textgreater : [Q] \textless database \textgreater : t0: \textless table0 \textgreater (c0: \textless column0 \textgreater , c1: \textless column1 \textgreater , ...), t1: \textless table1 \textgreater (c0: \textless column0 \textgreater , c1: \textless column1 \textgreater , ...), ... 
-    \item このようにエンコードして、SELECT t0.c2のようにSQLスケッチを生成する。
+    \item このようにエンコードして、SELECT t0.c2のようにSQLスケッチを生成する。これをDatabase-Aware Serializationと呼ぶ。
+    \item Question-Aware Aligner: またスケッチの生成においては(SELECT句, Keywords)の生成も行う。この生成はつぎのように行う。
+    \begin{itemize}
+        \item 考え得るすべてのSELECT句とKeywordsの組み合わせを列挙し、それをつぎのようにSLMにエンコードする: [CLS] user question: Q. our solution: SELECT${}_i$, Keywords${}_j$ [SEP]
+        \item これをSLMに入力して、ベクトル表現$H$を得る。その後全結合層$FC()$を通して、$a_{ij} = \mathrm{sigmoid}(FC(H))$をスコアとする(文中には$\mathrm{softmax}$って書いてあるけど$\mathrm{sigmoid}$だと思う、$FC()$はおそらく出力が一次元)。 
+    \end{itemize}
 \end{itemize}
 \end{method}
 
 \begin{method}{SQLクエリの補完と修正}
 \begin{itemize}
-    \item 説明A
-    \item \cite{attention_is_all_you_need}のように引用できる.
+    \item SQLスケッチの不足部分をLLMで補完する、クエリの実行結果やデータベースの内容に基づいて、SQLクエリを段階的に修正していく。
+    \item まずMulti-level matching strategyについて説明する。
+    \begin{itemize}
+        \item これは値の整合性を確保しつつ、LLMが正しい値を補完できるように支援するための手法である。
+        \item カラム単位、テーブル単位、データベース単位でチェックを行っていき、それぞれのレベルでLLMが推論した値とマッチする(値が近い)ものがあった場合にそのレベルで終了する。
+        \item 値が近いといことを判定するには、例えば文字ベースの類似度計算、意味ベース(embedding)の類似度計算を行って判定する。
+    \end{itemize}
+    \item 上記の方法で生成したクエリから、よいSQLクエリを選ぶ。
+    \begin{itemize}
+        \item SQLクエリの選択の際のアイデアは、クエリの実行結果を考慮することである、すなわち「生成したクエリを投げてみて、実行結果が空であればそのクエリは不適切である」とみなす。
+        \item 具体的にはMulti-level matching strategyで生成したクエリを実行して、結果が空でないものを選ぶ。 
+    \end{itemize}
 \end{itemize}
 \end{method}
 
 \section{実験結果}
 \begin{experiment}{実験手法}
 \begin{itemize}
-    \item 手法A.
+    \item データセット: Spiderデータセットを用いて学習し、Dr.Spider, GeoQuery, KaggleDBQAの4つのデータセットで検証をした。
+    \item 評価指標: LLMによって生成されるSQLクエリと答えのSQLクエリを実行してその結果が一致するときに正解とする指標; Execution Accuracy (EX) を用いた。
+    \item ベースライン: 
+    \begin{itemize}
+        \item SLMベース: SMBOP, RESDSQL, LLaMA2
+        \item LLMベース: Vanilla LLM, LLM + ICL(SQLクエリ例を与える)
+    \end{itemize}
+    \item モデル: 
+    \begin{itemize}
+        \item LLM: OpenIA API (gpt-3.5-turbo-0613, gpt-4-0613)
+        \item スケッチ学習: T5-3B,
+        \item Question-Aware Aligner: T5-3B
+        \item SQL Query Completion: Senetence-Bert, GloVe辞書
+    \end{itemize}
 \end{itemize}
 \end{experiment}
 
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item 結果A
-    \item 結果B
+    \item 精度は表\ref{fig:experiment}に示す。
+    \item オープンソースLM(SLMのことと思われる)を用いた実験結果
+    \begin{itemize}
+        \item SLM vs GPTだとGPTの方が平均性能では劣る
+        \item ZeroNL2SQLによりGPTはSLM系モデルを上回る精度となる。
+    \end{itemize}
+    \item 商用LLMを用いた実験結果
+    \begin{itemize}
+        \item ZeroNL2SQL vs LLM+ICLだとZeroNL2SQLのほうが平均性能では上回る。
+        \item コスト的な観点ではZeroNL2SQLはICL手法よりもトークン消費量が圧倒的に少ない。
+        \item 速度面でもZeroNL2SQLはVanilla LLMに次いで高速である。
+    \end{itemize}
 \end{itemize}
 \end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/text2sql-with-slm-and-llm/experiment.png}
+    \caption{実験結果}
+    \label{fig:experiment}
+\end{figure}
 
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 感想A
-  \item \ref{fig:template}のように図を引用することができる.
+  \item テーブルスキーマのみでサンプルのSQLクエリ無しで自然言語からSQLクエリを生成するのは大変なのだなと思った。
+  \item 新しいテーブルに対応するときにSQLクエリを用意しなくてよいのが良いところだと思う。
 \end{itemize}
 \end{kansou}
 
