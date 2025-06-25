@@ -149,7 +149,7 @@
     \begin{itemize}
         \item これは値の整合性を確保しつつ、LLMが正しい値を補完できるように支援するための手法である。
         \item カラム単位、テーブル単位、データベース単位でチェックを行っていき、それぞれのレベルでLLMが推論した値とマッチする(値が近い)ものがあった場合にそのレベルで終了する。
-        \item 値が近いといことを判定するには、例えば文字ベースの類似度計算、意味ベース(embedding)の類似度計算を行って判定する。
+        \item 値が近いということを判定するには、例えば文字ベースの類似度計算、意味ベース(embedding)の類似度計算を行って判定する。
     \end{itemize}
     \item 上記の方法で生成したクエリから、よいSQLクエリを選ぶ。
     \begin{itemize}
@@ -198,7 +198,7 @@
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{img/text2sql-with-slm-and-llm/experiment.png}
+    \includegraphics[width=0.9\textwidth]{img/text2sql-with-slm-and-llm/experiment.png}
     \caption{実験結果}
     \label{fig:experiment}
 \end{figure}
