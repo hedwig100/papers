@@ -83,7 +83,7 @@
     \item Link: \url{https://dl.acm.org/doi/10.14778/2824032.2824076}
     \item Conference: VLDB2015
     \item Citation: \cite{dataflow-model}
-    \item Content: \url{https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43864.pdf}
+    \item Content: \url{https://www.vldb.org/pvldb/vol8/p1792-Akidau.pdf}
 \end{itemize}
 
 \section{概要}
@@ -97,44 +97,87 @@
 \section{背景}
 \begin{simplebox}
 \begin{itemize}
-    \item 背景A
-    \item 背景B
+    \item 非有界 vs 有界
+    \begin{itemize}
+        \item 非有界なデータセットとは無限に続いていくデータセットのこと.
+        \item 有界なデータセットとは、有限のデータセットのこと.
+    \end{itemize}
+    \item ウィンドウ処理: データセットを時間で分割して処理すること.
+    \begin{itemize}
+        \item Fixed window: 長さが固定されていて、時間で分割されるウィンドウ (e.g. 1時間ごと, 1日ごと)
+        \item Sliding window: ウィンドウサイズとスライド周期で定義されるウィンドウ (e.g. 30分のウィンドウを1時間ごとに開始)
+        \item Session window: データのあるキーごとにウィンドウを作成する (e.g. ユーザごと1時間の間に起こした行動を集めるウィンドウ)
+    \end{itemize}
+    \item 時間の概念
+    \begin{itemize}
+        \item イベント時間: イベントそのものが発生した時間
+        \item 処理時間: あるイベントがパイプラインの中で処理された時間
+    \end{itemize}
+    \item 理想的にはイベント時間と処理時間は一致するが、現実にはイベント時間と処理時間はずれる.
 \end{itemize}
 \end{simplebox}
 
 \section{手法}
-\begin{method}{Jacobi Decoding}
+\begin{method}{Dataflow Model}
 \begin{itemize}
-    \item 説明A
-    \item 説明B
+    \item 構成要素
+    \begin{itemize}
+        \item ParDo: 各入力要素に対してユーザ定義関数が適用されて、1つの入力から0個以上の出力を生成する.
+        \item GroupByKey: (key, value)のペアをkeyごとにグループ化する. このときに無限データを仮定すると全データの収集は不可能となる. そこでウィンドウ処理が必要となる.
+    \end{itemize}
+    \item ウィンドウ処理
+    \begin{itemize}
+        \item 実質的にGroupByKeyをGroupByKeyAndWindowとして再定義する.
+        \item イベント時間に基づくウィンドウ処理をサポートするために(key, value, event\_time, window)のタプルを一つのデータとして扱う. この形で1. ウィンドウ割り当てと2. ウィンドウマージをできるようにすることで任意のウィンドウ操作が可能になる.
+        \begin{itemize}
+            \item ウィンドウ割り当て: windowを設定すること、同じデータを二つ上のウィンドウに割り当てるときは複製する.
+            \item ウィンドウマージ: マージする基準に従って、データをマージして新しいデータを作る.
+        \end{itemize}
+    \end{itemize}
+    \item トリガー
+    \begin{itemize}
+        \item 非有界なデータにおいては、いつウィンドウを閉じるか(ウィンドウに対する処理を完了するか)という問題があり、ウィンドウの完了を示す別のシグナルが必要となる.
+        \item Lambdaアーキテクチャでは、ストリーミング処理中はレイテンシが小さい近似値を出力し、バッチ処理で正確な値を出力する.
+        \item これを参考にして、一つのウィンドウが複数回の出力を行える仕組みを作る; これをトリガーとよぶ.
+        \item たとえば、データ件数が$N$件に達したらトリガーを発火させる、または、イベント時間がある時刻に達したらトリガーを発火させるなど.
+    \end{itemize}
+    \item Pane (おそらく出力のこと): ウィンドウの出力はトリガーによって発火させる, すなわち複数回出力するため、その出力をどのように扱うかを決める必要がある.
+    \begin{itemize}
+        \item Discarding: トリガー時にウィンドウの中身が破棄されて、後続の結果は過去の結果と一切関係を持たない.
+        \item Accumulating: トリガー時にウィンドウの中身は残って、次の結果は前の結果を上書きする.
+        \item Accumulating and Retracting: 出力済みの値を記録しておき、次のトリガー発火時に前の値を取り消す信号を最初に出力し、そのあとに新しい値を出力する.
+    \end{itemize}
+    \item Example
+    \begin{itemize}
+        \item TODO
+    \end{itemize}
 \end{itemize}
 \end{method}
 
-\begin{method}{Lookahead Decoding}
+\begin{method}{Implementation and Design}
 \begin{itemize}
-    \item 説明A
-    \item \cite{dataflow-model}のように引用できる.
+    \item TODO
 \end{itemize}
 \end{method}
 
-\section{実験結果}
-\begin{experiment}{実験手法}
-\begin{itemize}
-    \item 手法A.
-\end{itemize}
-\end{experiment}
+% \section{実験結果}
+% \begin{experiment}{実験手法}
+% \begin{itemize}
+%     \item 手法A.
+% \end{itemize}
+% \end{experiment}
 
-\begin{experiment}{実験結果}
-\begin{itemize}
-    \item 結果A
-    \item 結果B
-\end{itemize}
-\end{experiment}
+% \begin{experiment}{実験結果}
+% \begin{itemize}
+%     \item 結果A
+%     \item 結果B
+% \end{itemize}
+% \end{experiment}
 
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 感想A
+  \item Apach Beamのベースとなったデータフローモデルを提案した論文.
   \item \ref{fig:template}のように図を引用することができる.
 \end{itemize}
 \end{kansou}
