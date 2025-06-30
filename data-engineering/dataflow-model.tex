@@ -89,8 +89,13 @@
 \section{概要}
 \begin{simplebox}
 \begin{itemize}
-    \item 概要A
-    \item 概要B
+    \item dataflow modelを提案する. これは次のような性質を持つ.
+    \begin{itemize}
+        \item 非有界なデータセットを扱うことができる.
+        \item ストリーム処理とバッチ処理を抽象化して統一的に扱うことができる.
+        \item セッションウィンドウやスライディングウィンドウなどのウィンドウ処理をサポートする.
+        \item トリガーを用いて、ウィンドウの出力を制御することができる.
+    \end{itemize}
 \end{itemize}
 \end{simplebox}
 
@@ -147,16 +152,26 @@
         \item Accumulating: トリガー時にウィンドウの中身は残って、次の結果は前の結果を上書きする.
         \item Accumulating and Retracting: 出力済みの値を記録しておき、次のトリガー発火時に前の値を取り消す信号を最初に出力し、そのあとに新しい値を出力する.
     \end{itemize}
-    \item Example
-    \begin{itemize}
-        \item TODO
-    \end{itemize}
+    \item また上のトリガーをandやor条件で組み合わせることもできる.
+    % \item Example
+    % \begin{itemize}
+    %     \item TODO
+    % \end{itemize}
 \end{itemize}
 \end{method}
 
 \begin{method}{Implementation and Design}
 \begin{itemize}
-    \item TODO
+    \item このモデルはGoogle内部では「FlumeJava + MillWheel」で実装されており、外部向けとしては「Cloud Dataflow」として実装されている.
+    \item 設計に影響を与えた経験
+    \begin{itemize}
+        \item ログパイプライン: 通常はストリーミングモードで処理されるが、大規模なバックフィル(あとから穴を埋める)の場合はバッチモードで処理される.
+        \item セッション: セッションは極めて重要なユースケースであり、さまざまなプロダクトで利用されている.
+        \item 課金処理: 課金のためには、正確にすべての情報を集計する必要がある. ウォーターマークを使って基本的には集計し、遅延データに対してはアドホックに対応していたが、これでは不十分だった. そのためトリガーという自由度を高く、多様な出力パターンを実現する仕組みを作った.
+        \item 統計計算: 100\%正確な集計統計量を計算する必要はなく、ウォーターマークを使って適切な時間内に集計を得られるようにした. ウォーターマークトリガーの導入の後押しとなった.
+        \item レコメンデーション: レコメンデーションではユーザの行動をリアルタイムに追跡して、そのデータを用いて部分的なビューを素早く出すことの方が価値が高かった、そのため処理時間ベースのトリガーを採用していた.
+        \item 異常検知: 検索クエリのストリームを監視して、ある条件を満たすときに異常であると判断していた. そのため、合成トリガーのサポートを後押しした.
+    \end{itemize}
 \end{itemize}
 \end{method}
 
@@ -177,8 +192,9 @@
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item Apach Beamのベースとなったデータフローモデルを提案した論文.
-  \item \ref{fig:template}のように図を引用することができる.
+  \item Apach Beam, Dataflowのベースとなったデータフローモデルを提案した論文.
+  \item 正直これまでのデータパイプラインがどのようなものかわからないため、このモデルがどのような点で優れているのかよくわからない.
+  \item しかし、無限に続く、非有界なデータを前提とするのは面白いなと思った. たしかにサービスのログは無限につづくし、そのなかで統計量を計算しようと思うとそのような仮定が必要になるなと思った.
 \end{itemize}
 \end{kansou}
 
