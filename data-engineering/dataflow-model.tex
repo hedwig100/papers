@@ -89,13 +89,15 @@
 \section{概要}
 \begin{simplebox}
 \begin{itemize}
-    \item dataflow modelを提案する. これは次のような性質を持つ.
+    \item 以下のような性質を持つdataflow modelを提案する(このモデルはApach beam, Dataflowの元となったものである).
     \begin{itemize}
         \item 非有界なデータセットを扱うことができる.
         \item ストリーム処理とバッチ処理を抽象化して統一的に扱うことができる.
         \item セッションウィンドウやスライディングウィンドウなどのウィンドウ処理をサポートする.
         \item トリガーを用いて、ウィンドウの出力を制御することができる.
     \end{itemize}
+    \item このモデルはデータが無限に到着するケースにおいて(e.g. サイト閲覧ログ)、正確性、レイテンシ、コスト
+    の三つをバランスを柔軟に調整できるようなモデルを提供する.
 \end{itemize}
 \end{simplebox}
 
