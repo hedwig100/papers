@@ -1,0 +1,213 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{The dataflow model: a practical approach to balancing correctness, latency, and cost in massive-scale, unbounded, out-of-order data processing}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://dl.acm.org/doi/10.14778/2824032.2824076}
+    \item Conference: VLDB2015
+    \item Citation: \cite{dataflow-model}
+    \item Content: \url{https://www.vldb.org/pvldb/vol8/p1792-Akidau.pdf}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item 以下のような性質を持つdataflow modelを提案する(このモデルはApach beam, Dataflowの元となったものである).
+    \begin{itemize}
+        \item 非有界なデータセットを扱うことができる.
+        \item ストリーム処理とバッチ処理を抽象化して統一的に扱うことができる.
+        \item セッションウィンドウやスライディングウィンドウなどのウィンドウ処理をサポートする.
+        \item トリガーを用いて、ウィンドウの出力を制御することができる.
+    \end{itemize}
+    \item このモデルはデータが無限に到着するケースにおいて(e.g. サイト閲覧ログ)、正確性、レイテンシ、コスト
+    の三つをバランスを柔軟に調整できるようなモデルを提供する.
+\end{itemize}
+\end{simplebox}
+
+\section{背景}
+\begin{simplebox}
+\begin{itemize}
+    \item 非有界 vs 有界
+    \begin{itemize}
+        \item 非有界なデータセットとは無限に続いていくデータセットのこと.
+        \item 有界なデータセットとは、有限のデータセットのこと.
+    \end{itemize}
+    \item ウィンドウ処理: データセットを時間で分割して処理すること.
+    \begin{itemize}
+        \item Fixed window: 長さが固定されていて、時間で分割されるウィンドウ (e.g. 1時間ごと, 1日ごと)
+        \item Sliding window: ウィンドウサイズとスライド周期で定義されるウィンドウ (e.g. 30分のウィンドウを1時間ごとに開始)
+        \item Session window: データのあるキーごとにウィンドウを作成する (e.g. ユーザごと1時間の間に起こした行動を集めるウィンドウ)
+    \end{itemize}
+    \item 時間の概念
+    \begin{itemize}
+        \item イベント時間: イベントそのものが発生した時間
+        \item 処理時間: あるイベントがパイプラインの中で処理された時間
+    \end{itemize}
+    \item 理想的にはイベント時間と処理時間は一致するが、現実にはイベント時間と処理時間はずれる.
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{Dataflow Model}
+\begin{itemize}
+    \item 構成要素
+    \begin{itemize}
+        \item ParDo: 各入力要素に対してユーザ定義関数が適用されて、1つの入力から0個以上の出力を生成する.
+        \item GroupByKey: (key, value)のペアをkeyごとにグループ化する. このときに無限データを仮定すると全データの収集は不可能となる. そこでウィンドウ処理が必要となる.
+    \end{itemize}
+    \item ウィンドウ処理
+    \begin{itemize}
+        \item 実質的にGroupByKeyをGroupByKeyAndWindowとして再定義する.
+        \item イベント時間に基づくウィンドウ処理をサポートするために(key, value, event\_time, window)のタプルを一つのデータとして扱う. この形で1. ウィンドウ割り当てと2. ウィンドウマージをできるようにすることで任意のウィンドウ操作が可能になる.
+        \begin{itemize}
+            \item ウィンドウ割り当て: windowを設定すること、同じデータを二つ上のウィンドウに割り当てるときは複製する.
+            \item ウィンドウマージ: マージする基準に従って、データをマージして新しいデータを作る.
+        \end{itemize}
+    \end{itemize}
+    \item トリガー
+    \begin{itemize}
+        \item 非有界なデータにおいては、いつウィンドウを閉じるか(ウィンドウに対する処理を完了するか)という問題があり、ウィンドウの完了を示す別のシグナルが必要となる.
+        \item Lambdaアーキテクチャでは、ストリーミング処理中はレイテンシが小さい近似値を出力し、バッチ処理で正確な値を出力する.
+        \item これを参考にして、一つのウィンドウが複数回の出力を行える仕組みを作る; これをトリガーとよぶ.
+        \item たとえば、データ件数が$N$件に達したらトリガーを発火させる、または、イベント時間がある時刻に達したらトリガーを発火させるなど.
+    \end{itemize}
+    \item Pane (おそらく出力のこと): ウィンドウの出力はトリガーによって発火させる, すなわち複数回出力するため、その出力をどのように扱うかを決める必要がある.
+    \begin{itemize}
+        \item Discarding: トリガー時にウィンドウの中身が破棄されて、後続の結果は過去の結果と一切関係を持たない.
+        \item Accumulating: トリガー時にウィンドウの中身は残って、次の結果は前の結果を上書きする.
+        \item Accumulating and Retracting: 出力済みの値を記録しておき、次のトリガー発火時に前の値を取り消す信号を最初に出力し、そのあとに新しい値を出力する.
+    \end{itemize}
+    \item また上のトリガーをandやor条件で組み合わせることもできる.
+    % \item Example
+    % \begin{itemize}
+    %     \item TODO
+    % \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{Implementation and Design}
+\begin{itemize}
+    \item このモデルはGoogle内部では「FlumeJava + MillWheel」で実装されており、外部向けとしては「Cloud Dataflow」として実装されている.
+    \item 設計に影響を与えた経験
+    \begin{itemize}
+        \item ログパイプライン: 通常はストリーミングモードで処理されるが、大規模なバックフィル(あとから穴を埋める)の場合はバッチモードで処理される.
+        \item セッション: セッションは極めて重要なユースケースであり、さまざまなプロダクトで利用されている.
+        \item 課金処理: 課金のためには、正確にすべての情報を集計する必要がある. ウォーターマークを使って基本的には集計し、遅延データに対してはアドホックに対応していたが、これでは不十分だった. そのためトリガーという自由度を高く、多様な出力パターンを実現する仕組みを作った.
+        \item 統計計算: 100\%正確な集計統計量を計算する必要はなく、ウォーターマークを使って適切な時間内に集計を得られるようにした. ウォーターマークトリガーの導入の後押しとなった.
+        \item レコメンデーション: レコメンデーションではユーザの行動をリアルタイムに追跡して、そのデータを用いて部分的なビューを素早く出すことの方が価値が高かった、そのため処理時間ベースのトリガーを採用していた.
+        \item 異常検知: 検索クエリのストリームを監視して、ある条件を満たすときに異常であると判断していた. そのため、合成トリガーのサポートを後押しした.
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+% \section{実験結果}
+% \begin{experiment}{実験手法}
+% \begin{itemize}
+%     \item 手法A.
+% \end{itemize}
+% \end{experiment}
+
+% \begin{experiment}{実験結果}
+% \begin{itemize}
+%     \item 結果A
+%     \item 結果B
+% \end{itemize}
+% \end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item Apach Beam, Dataflowのベースとなったデータフローモデルを提案した論文.
+  \item 正直これまでのデータパイプラインがどのようなものかわからないため、このモデルがどのような点で優れているのかよくわからない.
+  \item しかし、無限に続く、非有界なデータを前提とするのは面白いなと思った. たしかにサービスのログは無限につづくし、そのなかで統計量を計算しようと思うとそのような仮定が必要になるなと思った.
+\end{itemize}
+\end{kansou}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.5\textwidth]{img/image.png}
+%     \caption{キャプション}
+%     \label{fig:template}
+% \end{figure}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
