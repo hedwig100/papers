@@ -84,3 +84,117 @@ M が高精度な分類を行う場合、それを活用して性能を向上さ
 　その上で、オンラインモデルでは理論的に競争力が保証され、セミオンラインモデルでは最適性が保証されます。
 さらに、これらのポリシーは **「MLロバスト（ML-robust）」**であり、
 　たとえ M が悪意的に動作し、どれほど不正確な予測を出しても、依然として競争力を保ちます
+
+### MCCache
+私たちは、MCC（単調一貫キャッシュ）を既存のデータキャッシュに非侵襲的に追加するプラグイン型のシステム MCCache [6] を開発しました。
+MCCache は、Redis や Memcached などのデータキャッシュが内部で用いているキャッシュポリシー（たいていは LRU 系）をバイパスし、専用の MCC キャッシュポリシーをその上で実行します。そして、基盤となるキャッシュが提供する削除操作（eviction operators）を通じて MCC の動作を注入します。
+
+現在の MCCache の実装では、Redis や Memcached をはじめとする代表的なデータキャッシュに対応する組み込みコネクタを提供しています。
+
+## たぶんここら辺なんか抜けてる
+
+## 3. Preliminary
+
+キャッシュと従来のキャッシュポリシーの基本を復習します.
+
+### データベースのバージョン
+データベース𝐷は、単純にデータ項目の集合 
+`{d_1, d_2,..., d_n}`としてモデル化します。実際には、
+
+- 読み込み: W[d_i] updates d_i in D
+- 書き込み: R[d_i] returns d_i
+
+書き込みがDの新しいバージョンを作る. D[i]をバージョンiのデータベースとする. d[j]をバージョンjでのアイテムdの値とする.
+
+### キャッシュの基本、ポリシー
+- キャッシュの説明
+    - cache overflow
+    - cache hit, miss
+    - cache schedule: リクエスト列に対してどのアイテムを削除したかという動作のリスト
+    - cache policy: cache scheduleをどう決めるかというアルゴリズムのこと, LRUが有名
+    - stale: キャッシュの中にあるアイテムがどれくらい本当の値より古いかということ
+
+## 3. Monotonic Consistent Caching
+### Caching with Monotonicity and Consistency
+
+- set-based requests `R: {d_1, ..., d_m}`: 複数のデータを堂宇時に読む読み出しクエリ、書き出しも同様に定義する.
+- Consistency: 書き込みリクエストによって変化するデータベースDを考える。読み込みリクエスト`R = {d_1, ..., d_m}`がDでconsistencyをもつとはデータベースのバージョンlがあって、d_1,...,d_mがすべてD[l]に存在することをいう.
+- Monotonicity:
+    - 二つの読み込みリクエスト`R, R^\prime`に対して、`R`が`R^\prime` を先行するとは、`R`と`R^\prime`のいずれにも登場するどんなクエリ`d`に対しても、`d`が`R`を読んだとき`d[i]`, `d`が`R^\prime`を読んだときは`d[j]`だったとすると,`i \leq j`が成立することをいう.
+    - `R_1, ..., R_n`を読みこみリクエストの列だとすると、`R_i`が単調であるとは任意の`R_l (l < i)`に対して、`R_l`が`R_i`を先行することをいう.
+- Monotonic consistent caching
+    - データベースDとそれに付随するキャッシュCを考える. T_iをReadもしくはWriteのリクエストとする. このとき読み出しリクエストは次の三つの可能性がある.
+    1. Monotonic consistent cache hit: RがMCC hitであるとはCが`d_1[v_1], ..., d_m[v_m]` を持っていて,
+        - あるデータベースのバージョン`D[l]`であって、`d_i[v_i] (i \in [1, m])`をすべて含むものがある
+        - 列lのなかに`R`を先行するリクエスト`R^\prime`は存在しない、また`R`によって読まれるアイテム`d_i[v_i]`より新しいバージョン`d_i`を見ているリクエストも存在しない.
+        - キャッシュされたd_iはstaleness boundを持つ.
+    2. Non-MCC hit: RはC上でnon-MCCヒットであるとは、Cにアイテムd_iのコピーは存在するが, MCC hitではないもののことを言う.
+    3. Cache miss: CがRのあるデータd_iを持っていないときにいう.
+    これまではcache missとconsistencyは別に検討されていた、すなわちどのデータをevictするか決めるのにcache policyを決めて、もし取得したアイテムがconsistentでない場合にはアプリケーション側でアイテムをリフェッチすることで解決していた, この二つの問題を同時に考えるキャッシュポリシーがMCC policyである.
+- MCC Schedules
+    - 通常のキャッシュポリシーに加えて, non-MCCなhitsを防ぐためのアイテムの更新を行う. すなわちキャッシュの要領だけではなくてキャッシュヒットがconsistentになるように必要なアイテムのアップデートを行う.
+- Version Selection
+    - MCC hitとするために二つのバージョン選択戦略を考える.
+    - (a) Eager: キャッシュされていない場合はDからもっとも最近のバージョンのアイテムを取得してキャッシュのアイテムをアップデートする.
+    - (b) Lazy: リクエストRをMCC hitとできるもっとも古いバージョンを計算してそのバージョンのアイテムを取得する.
+
+### Making Cache Monotonic and Consistent
+
+- MCCache: MCC policyを実装したcache
+- Input models: 
+    - (a) Batch: すべての読み込み、書き込み列は事前に知られている.
+    - (b) Semi-online: 読み込みリクエストは事前に知られているが、書き込みは知られていない.
+    - (c) Online: すべての読み込み、書き込み列は未知.
+
+## 4. Fundamental Study
+
+### Complexity
+- MCCP: 入力に対してフェッチコストを最小にするMCC policyを発見する問題.
+- Complexity
+    - DescitionバージョンでNP-complete
+    - EagerストラテジーでNP-hard
+    - LazyストラテジーでP
+
+### Characterizations
+- なぜMCCはそれほど複雑なのかを考察し、MCCポリシーをデザインする重要なアプローチを作る.
+- Obsolete items: キャッシュC上で処理されるリクエスト列を考える. ある時間tにおいてキャッシュC上でアイテムdがobsoleteであるとは、時刻t以降の任意のリクエストにおいてdがどんなMCC scheduleであっても利用されないことと定義する.
+- Principle: キャッシュオーバーフローが起きたら、obsoleteなアイテムから削除していく. 
+    (1) obsoleteなアイテムを削除するというアプローチはスケジュールのコスト削減にあたり、どれくらい効果があるのでしょうか?: 
+        - 毎回のリクエストの後にobsoleteなアイテムを削除すると実はnon-MCC hitsを無くすことができることが示せる.
+    (2) obsoleteなアイテムの特定はどれくらい複雑なのでしょうか?:
+        - Lazy戦略においてCのどのアイテムがobsoleteかどうか決定するのは多項式時間で可能.
+        - Eager戦略においてはcoNP-completeな問題となる.
+
+## 5. An optimal batch MCC policy
+前章のprincpleからBatch設定において、Lazy戦略でもEager戦略でも動作するMCC policy: bMCPを示す. Lazy戦略においては最適性が示されている.
+
+bMCPのアルゴリズムは以下のようになる.
+1. MCC hitならP[R_i] is nil
+2. non-MCC hitもしくはmissならば一致させるべきデータベースバージョンを決定
+3. キャッシュ内のデータがデータベースバージョンと一致しないものはすべて取得
+4. R_iに答えるのに必要な項目がキャッシュに存在しない場合はbMCPは次を実行.
+    - obsoleteな項目をすべて削除
+    - R_iに必要なキャッシュされていない項目をすべて取得
+5. それでもキャッシュに空きがない場合はBeladyのルールを適用(つぎに参照されるのが最も遅いキャッシュから順に削除していく)
+
+- データベースバージョンの決定
+    - Eager: 最新
+    - Lazy: キャッシュ内のデータについて以下のバージョンを記録しておく
+        - x.minV: staleness制約のを満たしながら、xを含む最小のデータベースバージョン
+        - x.lastV: リクエスト列においてRより前に現れたある読み取りリクエストR^\primeが最後に使用したキャッシュ内のxと同一バージョンを持つ最小のデータベースバージョン
+        - Rに含まれ、かつキャッシュCに存在するデータxについての`max(x.minV, x.lastV)`の最大値
+
+- obsolete itemsの特定
+    - キャッシュCが無限の要領を持つと仮定して、dry-runすることでobsolete itemsを特定する.
+
+- 上によりいかが示せる
+    - 多項式時間
+    - バッチモデルでbMCPはlazyおよびeager方式で単調性かつ整合性を満たす.
+    - lazy方式ではobがobsolete itemsを見つけ出す.
+
+## 6. Online policies with ml oracles
+### A Robust Competitive Semi-Online Policy
+### Extending to the Online Model
+
+## 7. EXPERIMENTAL STUDY
+
