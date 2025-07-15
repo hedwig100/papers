@@ -193,8 +193,44 @@ bMCPのアルゴリズムは以下のようになる.
     - lazy方式ではobがobsolete itemsを見つけ出す.
 
 ## 6. Online policies with ml oracles
+
+semi-onlineなモデルに拡張する。
+この場合はobsoleteなアイテムを特定することができないため、次のように拡張する、
+obsoleteかどうかを判定する機械学習モデルをブラックボックスとして使うことで拡張する。
+(a) MLモデルが高い精度ならロバストである.
+(b) MLモデルの精度が低くても敵対攻撃に理論的にはcompetitiveである.
+
 ### A Robust Competitive Semi-Online Policy
+
+- sMCP policy: bMCP policyからobsoleteの判定だけMLモデルで行う.
+- competitiveness: Pがc-competitveであるとは `cost(P,l) <= c\cdot cost(P^\prime,l) + O(1)` であることをいう.
+- `eps(M) = eta(l)/cost(OPT, l)` と定義する.
+- Lemma5. `CR(sMCP) <= 1 + eps(M)`である.
+
+- ML robustness
+    - policy PがML-robustであるとはcompetitive ratioがlの長さに依存しないくらい大きいときにいう.
+    - sMCPはまだML-robustではない
+
+- bMCPの変種とsMCPを組み合わせることでsMCPをロバストとする.
+    - bMCP0: bMCPから不要項目の削除処理をしないバージョン
+    - sMCP*: sMCP, bMCP0それぞれを動かす. sMCPのコストがbMCPの2倍以上になったら, bMCP0に切り替える. 逆もしかり.
+
+- sMCP\*は18-competitive, 誤りがない場合はsMCP\*は最適
+
 ### Extending to the Online Model
 
+- oMCP: 不要項目の判定に任意のブラックボックス型2値分類器Mを組み込むことでcompetitiveとMLロバストの両方を兼ね備えている.
+    - Beladyのルールが適用できない.
+    - 誤分類の影響が増幅される
+
+- sMCPと同様の方法でキャッシュC上の項目に「マーク」を行うことで、実行の流れをフェーズに分割する
+    - aがキャッシュCに格納されるときはその項目aにマークが付けられる.
+    - キャッシュ内のすべての項目がマークされるとフェーズが終了し、新たなフェーズがすべてのマークを解除して開始される.
+
+- sMCPと同様にoMCPも単調性と一貫性を保証する.
+- oMCPはk-competitive (k = size of C), かつk^\prime-competitive for any k^\prime < k.
+
 ## 7. EXPERIMENTAL STUDY
+
+
 
