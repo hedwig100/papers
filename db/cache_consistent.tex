@@ -207,12 +207,17 @@
 \begin{itemize}
     \item sMCP: Semi-online MCC Policy
     \begin{itemize}
-        \item obsoleteなアイテムの特定がsemi-onlineでは不可能なため、obsoleteかどうかを判定する機械学習モデルを用いる. 
-        \item モデルが
+        \item obsoleteなアイテムの特定がsemi-onlineでは不可能なため、obsoleteかどうかを判定する機械学習モデルを用いる, このポリシーをsMCPと呼ぶ.
+        \item Competitiveness: ポリシー$P$がポリシー$P^\prime$に対して$c$-competitveであるとは $\mathrm{cost}(P,l) \leq c\cdot \mathrm{cost}(P^\prime,l) + O(1)$ であることをいう.
+        \item $\epsilon(M) = \eta(l)/\mathrm{cost}(\mathrm{OPT}, l)$と定義する.
+        \item $\mathrm{CR}(sMCP)$をsMCPの最適なポリシー$\mathrm{OPT}$に対するcompetitive ratioとする.
+        \item すると$\mathrm{CR}(sMCP) \leq 1 + \epsilon(M)$である.
+        \item sMCP${}^*$をsMCPとbMCP${}^0$(bMCPからobsoleteなアイテムを取り除く操作を無くしたもの)を組み合わせたものとすると, sMCP${}^*$は$18$-competitiveでML-robustとなる.
     \end{itemize}
     \item oMCP: Online MCC Policy
     \begin{itemize}
         \item sMCPの制約に加えて、Beladyのルールを利用してキャッシュ内のアイテムを削除することもできない.
+        \item そのためBeladyのルールを使って削除している部分はLRUで削除する.
     \end{itemize}
 \end{itemize}
 \end{method}
