@@ -1,0 +1,219 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{The Dawn of Natural Language to SQL: Are We Fully Ready?}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://arxiv.org/pdf/2406.01265}
+    \item Conference: VLDB24
+    \item Citation: \cite{dawn_nl2sql}
+    \item Arxiv: \url{https://arxiv.org/pdf/2406.01265}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item NL2SQL評価用フレームワークNL2SQL360を提案する.
+    \item NL2SQLにおいてはPLMやLLMを使う手法などがあるが、それらは用途に応じた選定を行う必要がある. たとえばBIツールにおいては「さまざまな事業ドメイン、複雑なSQL操作、ユーザの言語の使い方の多様性」などを考慮して使用する手法を決めるべきである.
+    \item そこで特定のベンチマーク上でnl2sqlモデルを多角的に体系的に評価できるツールが求められており、それを提案した.
+    \item このツールをつくり、さらにこのツールを使って実験することで次のような知見を得た.
+    \begin{itemize}
+        \item ファインチューニングは性能向上においてきわめて重要.
+        \item 特定のシナリオのデータでファインチューニングされた場合は自然言語の質問が多少変化しても性能を維持する.
+        \item ドメイン知識でファインチューニングされたモデルは高い安定性を示す.
+        \item コード処理能力はNL2SQLの性能において重要な要素である.
+    \end{itemize}
+    \item さらにNL2SQL360を使って、堅牢なNL2SQLモデルSuperSQLを提案した.
+\end{itemize}
+\end{simplebox}
+
+\section{背景}
+\begin{simplebox}
+\begin{itemize}
+    \item 既存のNL2SQL手法
+    \begin{itemize}
+        \item Rule-based: 自然言語を構文解析してルールベースでSQLを生成する.
+        \item Neural Network-based: seq2seq系のモデルでSQLを生成する. IRNetなどの手法を用いる.
+        \item PLM-based: Bertなどのpretrained language modelを用いてSQLを生成する手法.
+        \item LLM-based: GPTなどの大規模言語モデルを用いてSQLを生成する手法.
+    \end{itemize}
+    \item 本論文に関係する研究として、LLM-basedな手法がどれくらい活用できるかを評価した論文などがあるが、以下のような点に欠けている.
+    \begin{itemize}
+        \item 利用シナリオの見落とし: Spiderデータセット全体での評価はしているが、たとえば特定ドメインに限った場合や特定タイプのSQLクエリに限った場合の評価は行われていない.
+        \item 統一的な比較: さまざまな手法を統一的に比較するためのフレームワークがない.
+        \item NL2SQLの手法設計の探索: 設計の探索が行われていないため、LLMとPLMを使ったときにアーキテクチャなどのモジュールがどのように相乗効果的に統合できるかの理解が制限されている.
+    \end{itemize}
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{NL2SQL360}
+\begin{itemize}
+    \item NL2SQLは6つのコンポーネントからなる.
+    \begin{itemize}
+        \item ベンチマークデータセット: Spider, BIRD, KaggleDBQA, WikiSQLなど
+        \item モデルzoo: LLMベース手法、PLMベース手法などの手法を集めたもの.
+        \item データセットフィルター: 以下の条件でデータセットにフィルターを書けることができる.
+        \begin{itemize}
+            \item SQLの複雑度
+            \item SQLの構文特徴: JOINの有無、サブクエリの有無などで分類
+            \item データドメイン: 記入、医療、小売りなどのデータドメインごとにデータベースを分類
+            \item クエリの表現揺らぎ: 自然言語クエリが表現違いの場合に対応能力を評価
+        \end{itemize}
+        \item 評価指標
+        \begin{itemize}
+            \item EX: SQLが正しい結果を返すか
+            \item EM: SQL構文が完全一致するか
+            \item VES: 有効SQLの生成率
+            \item QVT: 自然言語での質問の多様性に対してモデルがどれくらい正しくSQLを出力できるかを測る指標(本文中式1)
+        \end{itemize}
+        \item 実行器とログ
+        \begin{itemize}
+            \item モデルやデータセットを設定して評価用のワークフローを実行することができる. その結果をログに出力する.
+        \end{itemize}
+        \item 評価器
+        \begin{itemize}
+            \item ログデータから評価指標を計算して定量的な計算を行う. 
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item データセット
+    \begin{itemize}
+        \item Spider
+        \item BIRD
+    \end{itemize}
+    \item 手法
+    \begin{itemize}
+        \item Prompt-based LLM
+        \begin{itemize}
+            \item DINSQL: SQL生成を複数のステップに分解し、それぞれをプロンプトで指示する手法.
+            \item DAILSQL: 質問とデータベーススキーマを入力とし、関連するクエリ例などをプロンプトに含めてSQLを生成する手法.
+            \item DAILSQL with SC: DAILSQLにself-consistencyという後処理の手法を組み合わせたもの
+            \item C3SQL: 
+        \end{itemize}
+        \item Fine-tuned LLM
+        \begin{itemize}
+            \item SFT CodeS: 
+            \item Llama2-7B: 
+            \item Llama3-8B: 
+            \item StarCoder-7B: 
+            \item CodeLlama-7B: 
+            \item Deepseek-Coder-7B: 
+        \end{itemize}
+        \item PLM-based
+        \begin{itemize}
+            \item Graphix-3B + PICARD: 
+            \item RESDSQL: 
+            \item RESDSQL + NatSQL: 
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item 結果A
+    \item 結果B
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item 感想A
+  \item \ref{fig:template}のように図を引用することができる.
+\end{itemize}
+\end{kansou}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/image.png}
+    \caption{キャプション}
+    \label{fig:template}
+\end{figure}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
