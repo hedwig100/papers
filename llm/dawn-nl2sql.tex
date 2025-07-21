@@ -170,48 +170,108 @@
             \item DINSQL: SQL生成を複数のステップに分解し、それぞれをプロンプトで指示する手法.
             \item DAILSQL: 質問とデータベーススキーマを入力とし、関連するクエリ例などをプロンプトに含めてSQLを生成する手法.
             \item DAILSQL with SC: DAILSQLにself-consistencyという後処理の手法を組み合わせたもの
-            \item C3SQL: 
+            \item C3SQL: くわしくは\cite{c3_nl2sql}を参照.
         \end{itemize}
         \item Fine-tuned LLM
         \begin{itemize}
-            \item SFT CodeS: 
-            \item Llama2-7B: 
-            \item Llama3-8B: 
-            \item StarCoder-7B: 
-            \item CodeLlama-7B: 
-            \item Deepseek-Coder-7B: 
+            \item SFT CodeS: SQLに関連するコーパスでファインチューニングしたLLM.
+            \item Llama2-7B
+            \item Llama3-8B 
+            \item StarCoder-7B: Githubのライセンス付データで学習されたLLM.
+            \item CodeLlama-7B: Llama2をベースにコード生成に特化してファインチューニングされたLLM.
+            \item Deepseek-Coder-7B: Deepseekのコード生成に特化したモデル.
         \end{itemize}
         \item PLM-based
         \begin{itemize}
-            \item Graphix-3B + PICARD: 
-            \item RESDSQL: 
-            \item RESDSQL + NatSQL: 
+            \item Graphix-3B + PICARD: \cite{graphix_t5}にPICCARDという手法を利用したもの. 
+            \item RESDSQL: \cite{resdsql}に基づく手法.
+            \item RESDSQL + NatSQL: \cite{resdsql}にNatSQLという手法を組み合わせたもの.
         \end{itemize}
+    \end{itemize}
+    \item Metrics
+    \begin{itemize}
+        \item EM, EX, VES, QVT, トークン効率, レイテンシ
     \end{itemize}
 \end{itemize}
 \end{experiment}
 
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item 結果A
-    \item 結果B
+    \item Exp1: Accuracy vs SQL complexity
+    \begin{itemize}
+        \item SQLの複雑度を変えながらEXおよびEMを算出した(図\ref{fig:acc-vs-complexity}).
+        \item LLMベースの手法はPLMベースの手法よりも高いEXを示した.
+        \item 教師ありファインチューニング後のLLMベース手法はプロンプトベースのLLM手法よりも高いEMを示した.
+    \end{itemize}
+    \item Exp2: Accuracy vs SQL characterstics
+    \begin{itemize}
+        \item サブクエリ、ORDER BY, JOINなどの特徴によって精度がどう変わるかを実験した.
+        \item サブクエリ: サブクエリを含むケースはほかのケースよりもモデル精度が低い
+        \item 論理演算子: 多くの論理演算子が必要であればあるほど、LLMモデルがPLMモデルより良い精度を示す.
+        \item JOIN: JOIN操作が必要な場合は複雑なデータスキーマの理解を必要とし、それによってLLMはPLMよりも高い精度を示す.
+    \end{itemize}
+    \item Exp3: 自然言語の質問の多様性に対する堅牢性
+    \begin{itemize}
+        \item LLMベース、PLMベースで明確な優劣は存在しないが、ファいんちゅ0人ぐされたLLMの方がQVTが高い.
+    \end{itemize}
+    \item Exp4: データベースのドメインへの適応
+    \begin{itemize}
+        \item 検証用データベースをドメインごとに分けて精度を検証
+        \item トレーニング用のデータベース数が多いドメインではファインチューニング手法の方が高い性能を示す一方、少ないドメインではプロンプトベースの手法の方が優れている.
+    \end{itemize}
+    \item Exp5: LLMベースの手法のファインチューニング
+    \item Exp6: LLMベースの手法のトークン効率について
+    \begin{itemize}
+        \item GPT3.5とGPT4ではトークン単価が数十倍異なるため、トークン効率も重要な指標である.
+        \item EXスコア/平均トークンコストを計算してトークン効率を評価した.
+        \item C3SQLはGPT3.5を利用しているため、もっともトークン効率が高い.
+    \end{itemize}
+    \item Exp7: PLMベースの手法の効率性
+    \begin{itemize}
+        \item 実際のアプリケーションにおいては精度とレイテンシの両立が求められる.
+        \item RESDSQL(Bage/Large/3B) + NatSQLの手法でレイテンシ、EXを比較.
+        \item モデルサイズが大きいほどGPUメモリとレイテンシが増加する.
+        \item RESDSQL-Base + NatSQLとRESDSQL-LargeはほぼおなじEXだが、前者の方がレイテンシが小さい.
+    \end{itemize}
+    \item Exp8: SQLの効率性
+    \begin{itemize}
+        \item 生成されたSQLの効率を評価した. 
+        \item SQLの効率性はLLM、PLMのいずれが優れているといった点はないが、難しいSQLを生成する場合は効率性が落ちる.
+    \end{itemize}
+    \item Exp9: トレーニングサンプル数の精度に対する影響
+    \begin{itemize}
+        \item トレーニングサンプル数が増えるほどEXは向上する、しかしその伸びは増えれば増えるほど減少する.
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/dawn-nl2sql/acc-vs-complexity.png}
+    \includegraphics[width=0.5\textwidth]{img/dawn-nl2sql/acc-vs-complexity-bird.png}
+    \caption{SQLの複雑度に対する精度}
+    \label{fig:acc-vs-complexity}
+\end{figure}
+
+\begin{experiment}{実験結果から得られた発見}
+\begin{itemize}
+    \item ファインチューニングは精度向上のために重要である.
+    \item サブクエリを含むSQLを生成する場合はLLMベースの手法がPLMベースの手法を上回る.
+    \item 論理演算子が必要とされる場合は、LLMベースの手法がPLMベースの手法よりも良い性能を示す.
+    \item JOINが必要な場合は、LLMベースの手法がPLMベースの手法よりも良い性能を示す. NatSQLを中間表現として使うことでJOINを予測する複雑度を低減して精度が良くなる.
+    \item ORDER BYによるLLM/PLMベースの手法の性能差はデータセットにより異なる.
+    \item QVTに関してはLLMとPLMの手法で明確な優劣はない.
+    \item データベース数が多いドメインではそのデータでのファインチューニングが精度に大きく寄与する.
+    \item 教師ありファインチューニングのあとでは、モデルのコーディング性能とSQL生成性能に大きな相関がある. よってコーディング性能が高いLLMを使うことが重要.
 \end{itemize}
 \end{experiment}
 
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 感想A
-  \item \ref{fig:template}のように図を引用することができる.
+  \item LLMをファインチューニングするときに誤って評価用データセットに入っているデータでチューニングしたりはさすがにしてないのかなと思った(ファインチューニングするとかなり精度上がっているように見えるので).
 \end{itemize}
 \end{kansou}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.5\textwidth]{img/image.png}
-    \caption{キャプション}
-    \label{fig:template}
-\end{figure}
 
 \bibliographystyle{jplain}
 \bibliography{template.bib}
