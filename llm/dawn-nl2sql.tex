@@ -266,10 +266,28 @@
 \end{itemize}
 \end{experiment}
 
+\begin{method}{SuperSQL}
+    さまざまなNL2SQL手法を遺伝的アルゴリズムによって自動的に探索することで、SuperSQLという新たなNL2SQL手法を提案する.
+    \begin{itemize}
+        \item 設計空間: 前処理、プロンプト戦略、SQL生成戦略、後処理などのモジュールがある. 
+        \item 上の設計空間を定義し、遺伝的アルゴリズムで探索することで、最適なNL2SQL手法を見つける.
+        \item 遺伝的アルゴリズムによって発見された戦略: SuperSQLは以下のように構成される.
+        \begin{itemize}
+            \item 前処理: RESDSQLのスキーマリンキング、BRIDGE v2のDB Contents
+            \item プロンプト生成: DAILSQLのFew-Shotモジュール
+            \item SQL生成: OpenAIのGreedy Decoding
+            \item 後処理: DAILSQLのSelf-Consistency
+        \end{itemize}
+        \item SuperSQLのSpider, BIRDでのEXは図\ref{fig:acc-vs-complexity}に示している. SpiderのMedium-Extraなどの難しいテストセット上でよい性能を示した.
+    \end{itemize}
+\end{method}
+
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item LLMをファインチューニングするときに誤って評価用データセットに入っているデータでチューニングしたりはさすがにしてないのかなと思った(ファインチューニングするとかなり精度上がっているように見えるので).
+  \item LLMをファインチューニングするときに同じドメインの（クエリ対象のテーブルが同じ）クエリを含んでいるのかが気になった. あまりそこには言及されていないがそれがあるかないかでファインチューニングの効果が変わるのではないかと思った.
+  \item LLMベースの手法でもファインチューニングが効くのだということが分かった.
+  \item 実験によってどの手法がどのような条件で有効なのかわかってきたのがよかった, 詳細な各手法についてくわしくないので調べたいと思った.
 \end{itemize}
 \end{kansou}
 
