@@ -125,23 +125,23 @@
     \end{itemize}
     \item どのように次のステップを選ぶかについて(図\ref{fig:voting}参照)
     \begin{itemize}
-        \item マジョリティ投票: 最後の答えを出力するまでLLMに反復させ、その多数決を行う
-        \item ツリー探索: 各反復でいくつかの異なる応答を生成し、それらの応答をツリー構造で探索することで、最終的な答えを導き出す。
-        \item 実行ベース投票: 各反復で生成されたSQLクエリやPythonコードを実行し、その結果に基づいて次のステップを一つ選択する。
+        \item マジョリティ投票(Majority Voting): 最後の答えを出力するまでLLMに反復させ、その多数決を行う
+        \item ツリー探索(Tree Search): 各反復でいくつかの異なる応答を生成し、それらの応答をツリー構造で探索することで、最終的な答えを導き出す。
+        \item 実行ベース投票(Execution-based Voting): 各反復で生成されたSQLクエリやPythonコードを実行し、その結果に基づいて次のステップを一つ選択する。
     \end{itemize}
 \end{itemize}
 \end{method}
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{img/ReAcTable/overview.png}
+    \includegraphics[width=1.0\textwidth]{img/ReAcTable/overview.png}
     \caption{ReAcTableの全体概要}
     \label{fig:overview}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{img/ReAcTable/voting.png}
+    \includegraphics[width=1.0\textwidth]{img/ReAcTable/voting.png}
     \caption{ReAcTableの投票メカニズム}
     \label{fig:voting}
 \end{figure}
@@ -158,17 +158,33 @@
 
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item 結果A
+    \item WikiTQではReAcTable with Majority Votingが最も高い精度(68.0\%)を示した(図\ref{fig:wikitq_result})。
+    \item TabFactではReAcTable with Majority Votingが事前学習なしのモデルでは最も高い精度(86.1\%)を示した。事前学習ありモデルではPASTAが90.8\%と高い精度を達成した(図\ref{fig:tabfact_fetaqa_result})。
+    \item ReAcTableは学習を必要とせず高い精度を達成することが分かった、またMajority Votingが最も高い精度を示した。
 \end{itemize}
 \end{experiment}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/ReAcTable/wikitq_result.png}
+    \caption{ReAcTableのWikiTQでの性能}
+    \label{fig:wikitq_result}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/ReAcTable/tabfact_fetaqa_result.png}
+    \caption{ReAcTableのTabFact, FeTaQAでの性能}
+    \label{fig:tabfact_fetaqa_result}
+\end{figure}
+
 \begin{experiment}{ReAcTableの分析}
 \begin{itemize}
-    \item 中間テーブルの効果
-    \item 反復回数の効果
-    \item Python実行器の効果
-    \item 異なる多数決方式の効果
-    \item レイテンシ
+    \item 中間テーブルの効果: 中間テーブルの生成をせず一回で答えを出す手法で実験すると精度は49.4\%にとどまり、これは16.4\%の改善となった。
+    \item 反復回数の効果: 多くの場合、質問に答えるのに必要な反復回数は2回だった、そうでない質問も5回以内で答える。最大反復回数を制限した場合、最大反復回数を2回に設定すると精度が大きく向上し、それ以上はあまり変化しなかった。
+    \item Python実行器の効果: Python実行器がない場合は精度はWikiTQで3.5\%に低下する。
+    \item 異なる多数決方式の効果: Majority Votingを使うとより推論回数が増える、すなわちコストが増えるがその分精度が向上する。ツリー探索よりも精度とコストの良いトレードオフを持つ。
+    \item レイテンシ: コード予測がReAcTableで最も時間がかかる部分である。WikiTQではe2eのレイテンシが平均5.323秒であった
 \end{itemize}
 \end{experiment}
 
