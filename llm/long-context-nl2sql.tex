@@ -116,7 +116,7 @@ Context for NL2SQL}
 \end{itemize}
 \end{method}
 
-\section{LongContextLLMの評価設定}
+\section{LongContextLLMの評価}
 \begin{experiment}{評価設定}
 \begin{itemize}
     \item モデル: GCP gemini APIを利用し、gemini-1.5-pro-002, gemini-1.5-flash-002 を利用する.
@@ -127,9 +127,16 @@ Context for NL2SQL}
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{img/long-context-nl2sql/result.png}
+    \includegraphics[width=0.7\textwidth]{img/long-context-nl2sql/result.png}
     \caption{Long Context LLMの評価結果}
     \label{fig:full-result}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/long-context-nl2sql/all-table.png}
+    \caption{全テーブルを用いたスキーマリンキングの効果}
+    \label{fig:all-table}
 \end{figure}
 
 \begin{experiment}{実験結果}
@@ -150,12 +157,12 @@ Context for NL2SQL}
     \end{itemize}
     \item 自己修正の効果
     \begin{itemize}
-        \item 正しいSQLが生成されたが、結果が空であったときに列値のサンプルリストを提示することで自己修正させる。-> 修正が行われるが精度は数\%程度で必要な入力トークンが多い。
+        \item 正しいSQLが生成されたが、結果が空であったときに列値のサンプルリストを提示することで自己修正させる。自己修正によって修正が行われるが精度は数\%程度しか増加せず、その割には必要な入力トークンが多い。
         \item ユーザへの追加質問を行いスキーマ情報をフィルタリングする、この場合は数\%程度精度が向上し、必要な入力トークン数もそれほど多くない。
     \end{itemize}
     \item SQLiteのドキュメントの効果
     \begin{itemize}
-        \item ほとんど効果ない->おそらくすでにモデルが知識としてもっているため。
+        \item ほとんど効果ない、それはおそらくすでにモデルが知識としてもっているため。
     \end{itemize}
     \item コンテキストとレイテンシの関係
     \begin{itemize}
@@ -165,12 +172,22 @@ Context for NL2SQL}
 \end{itemize}
 \end{experiment}
 
+\begin{experiment}{Ablation Study}
+コンテキスト情報を一つずつ追加する追加実験を行った。
+異なる種類のコンテキスト情報が異なる質問タイプに有効であることが示された。
+\begin{itemize}
+    \item 追加のサンプル値は複雑な質問やあいまいな質問に有効。
+    \item SQLの合成例は簡単な質問に有効だが、難しい質問では性能低下の場合もある。
+    \item ユーザへの追加質問によるヒントは特に重要で正確なSQL生成に大きく寄与する。
+\end{itemize}
+\end{experiment}
+
 \section{感想}
 \begin{kansou}
 \begin{itemize}
   \item Gemini1.5proは古くないか？とは思った。
   \item テーブルスキーマをすべてプロンプトにいれてもそこそこ機能するという点は面白いと思った。コンテキスト長が長くなりすぎてコスト的な問題が発生するため、実際のアプリケーションで使うには工夫が必要そう。
-  \item 入力トークン長がある閾値より大きくなるとレイテンシが大きく増加するというのはLLMを扱う上で興味深い。
+  \item 入力トークン長がある閾値より大きくなるとレイテンシが大きく増加するというのはおもしろい、入力トークンがある程度長くなるとAPIの裏側でキューイングなど発生してレイテンシとその分散が大きくなるというのは納得感がある。
 \end{itemize}
 \end{kansou}
 
