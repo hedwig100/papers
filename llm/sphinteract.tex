@@ -131,7 +131,7 @@
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{img/sphinteract/overview.png}
+    \includegraphics[width=0.7\textwidth]{img/sphinteract/overview.png}
     \caption{Sphinteractの概要}
     \label{fig:overview}
 \end{figure}
@@ -157,23 +157,66 @@
 \section{実験結果}
 \begin{experiment}{実験手法}
 \begin{itemize}
-    \item 
+    \item LLM設定
+    \begin{itemize}
+        \item GPT3.5 Turbo, GPT-4 Turbo
+        \item 温度パラメータは$0.0$
+    \end{itemize}
+    \item ベースライン
+    \begin{itemize}
+        \item DAIL-SQL
+        \item ファインチューニングモデルや非標準情報を用いたプロンプトは比較対象外
+    \end{itemize}
+    \item フィードバックオラクル
+    \begin{itemize}
+        \item ユーザとの質問をシミュレートするオラクルを使用して実験を行う
+        \item オラクルの入力: 確認質問+ゴールデンSQL
+    \end{itemize}
+    \item Few Shotの例
+    \begin{itemize}
+        \item 確認の質問生成用に: 静的に8例を選択
+        \item Simple Feedbackの場合のSQL生成: 静的に8例を選択
+        \item CQのあとのSQL生成に: ユーザ質問と問題集内の質問のベクトル埋め込み間のコサイン類似度に基づいて選択 
+    \end{itemize}
 \end{itemize}
 \end{experiment}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/sphinteract/zero-shot.png}
+    \caption{ゼロショットの場合の実験結果}
+    \label{fig:zero-shot}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/sphinteract/few-shot.png}
+    \caption{Fewショットの場合の実験結果}
+    \label{fig:few-shot}
+\end{figure}
+
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item Zero Shotの場合
+    \item Zero Shotの場合(図\ref{fig:zero-shot})
     \begin{itemize}
-        \item 
+        \item Simple Feedback: よいか悪いかだけのフィードバックなので精度向上は小さい
+        \item Clarification Questions: KaggleDBQAでは42.3\%の精度向上、BIRDでは26.9\%の精度向上
+        \item CQ + Early Stopping: すべての曖昧さが解消されたと判断された時点で対話を終了するため、対話回数は少なくなり、精度向上も限定的
+        \item ただし、CQでは対話回数が多くなりコストがCQ+ESより高くなる。
     \end{itemize}
-    \item Few Shotの場合
+    \item Few Shotの場合(図\ref{fig:few-shot})
     \begin{itemize}
-        \item 
+        \item Simple Feedback: 例の数をある程度増やすと精度が微減または横ばいになる
+        \item CQ: SQL例が多くなるほど精度が向上する
+        \item CQ+ES: 例の数をある程度増やすと精度が微減または横ばいになる
+        \item いずれのケースでもZero-Shotと比べた場合の精度改善は大幅（Simple Feedbackでも大きく改善する）。
     \end{itemize}
     \item Userスタディ
     \begin{itemize}
-        \item 
+        \item 実際に11名のデータサイエンティストによるユーザスタディを行った
+        \item 90\%のユーザは質問に正しく解答してくれたと答え、認知負荷も小さかった。
+        \item 平均質問回数は2.18回となった
+        \item FBとしては「自由形式FBの方が良い場合もある、AmbValueに関する曖昧性の解決をより多く解決してほしい」などが挙げられた。
     \end{itemize}
 \end{itemize}
 \end{experiment}
@@ -182,17 +225,11 @@
 \begin{kansou}
 \begin{itemize}
   \item ユーザの質問に曖昧性がある場合にインタラクティブにユーザ意図を確認することでNL2SQLの精度向上を目指していて、現実に近い環境を考慮している点が面白いと思った。
+  \item FewShotの例の選択がどのSQLを生成するタイミング化で用いる例の選び方が変わっていてそこを変える理由は何だろうと思った。
+  \item 単純な二値フィードバックでもFewShotを用いると大きく精度が向上するのは興味深い。
 \end{itemize}
 \end{kansou}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.5\textwidth]{img/image.png}
-    \caption{キャプション}
-    \label{fig:template}
-\end{figure}
-
-\bibliographystyle{jplain}
-\bibliography{template.bib}
+% \bibliographystyle{jplain}
+% \bibliography{template.bib}
 
 \end{document}
