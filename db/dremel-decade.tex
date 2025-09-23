@@ -1,0 +1,127 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{Dremel: A Decade of Interactive SQL Analysis at Web Scale}
+\author{\empty}
+\date{\empty}
+
+%% ChatGPT URL
+%% https://chatgpt.com/c/68d27c7c-3b74-8325-9ac3-607872c611f3
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/pvldb/vol13/p3461-melnik.pdf}
+    \item Conference: VLDB 2020
+    \item Citation:
+    \item Arxiv: \url{https://www.vldb.org/pvldb/vol13/p3461-melnik.pdf}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item Dremelの初めの論文の公開から10年経過し、Dremel(BigQuery)の10年の運用によって得てきた知見を述べる。
+    \item SQLのインターフェース、計算とストレージの分離、カラム型ストレージのフォーマットなどのDremelの設計上のアイデアを詳細に説明する。
+\end{itemize}
+\end{simplebox}
+
+\begin{method}{SQL}
+\begin{itemize}
+    \item Googleではビッグデータの分析に当初はMapReduceを利用しており、MapReduceでバッチ処理を書き、データの分析などを行っていた。当時は「SQLはスケールしない」という考えが一般的であった。
+    \item DremelではSQLをインターフェースとして採用した。これによりユーザはSQLクエリを書くだけで大規模なデータセットを分析できるようになり、インタラクティブにクエリを記述、改良できるようになった。
+    \item さらにSpannerなどほかのSQLをサポートするシステムと同じインターフェースで扱えるようにGoogleSQLという構造化データのクエリなどをサポートするSQL実装を導入した、それをGoogleの他のSQLシステムと共通化した。
+\end{itemize}
+\end{method}
+
+\begin{method}{計算とストレージの分離}
+\begin{itemize}
+    \item Dremelの初期は各サーバのローカルディスクにデータを保存していた。しかし保存するデータが増えるにつれ、ストレージの追加にはサーバ追加とCPUスケーリングが必要となるという問題が出てきていた。
+    \item 上の問題を解決するためにshared-nothingアーキテクチャ(つまり計算とストレージの分離)を検討し、Google File System(GFS)をストレージとして利用することにした。GFSを用いて高速なクエリを実現するむずかしさはのちに説明する。
+    \item Dremelでは当初結合処理はキーでシャッフルして結合することで実装されていた。このシャッフルにはシャッフルした結果を保持する中間ストレージを必要としていたが、これはレイテンシのボトルネックとなっていた。
+    \item そこでDremelでは中間シャッフルデータをメモリに保持するようにすることでシャッフルレイテンシを削減した。
+\end{itemize}
+\end{method}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item インメモリでシャッフルをして結合処理を行うというところの意味がちょっとわからなかった。メモリにのるなら初めからそうすればよかったのではと思った。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
