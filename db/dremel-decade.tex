@@ -1,0 +1,176 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{Dremel: A Decade of Interactive SQL Analysis at Web Scale}
+\author{\empty}
+\date{\empty}
+
+%% ChatGPT URL
+%% https://chatgpt.com/c/68d27c7c-3b74-8325-9ac3-607872c611f3
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/pvldb/vol13/p3461-melnik.pdf}
+    \item Conference: VLDB 2020
+    \item Citation:
+    \item Arxiv: \url{https://www.vldb.org/pvldb/vol13/p3461-melnik.pdf}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item Dremelの初めの論文の公開から10年経過し、Dremel(BigQuery)の10年の運用によって得てきた知見を述べる。
+    \item SQLのインターフェース、計算とストレージの分離、カラム型ストレージのフォーマットなどのDremelの設計上のアイデアを詳細に説明する。
+\end{itemize}
+\end{simplebox}
+
+\begin{method}{SQL}
+\begin{itemize}
+    \item Googleではビッグデータの分析に当初はMapReduceを利用しており、MapReduceでバッチ処理を書き、データの分析などを行っていた。当時は「SQLはスケールしない」という考えが一般的であった。
+    \item DremelではSQLをインターフェースとして採用した。これによりユーザはSQLクエリを書くだけで大規模なデータセットを分析できるようになり、インタラクティブにクエリを記述、改良できるようになった。
+    \item さらにSpannerなどほかのSQLをサポートするシステムと同じインターフェースで扱えるようにGoogleSQLという構造化データのクエリなどをサポートするSQL実装を導入した、それをGoogleの他のSQLシステムと共通化した。
+\end{itemize}
+\end{method}
+
+\begin{method}{計算とストレージの分離}
+\begin{itemize}
+    \item Dremelの初期は各サーバのローカルディスクにデータを保存していた。しかし保存するデータが増えるにつれ、ストレージの追加にはサーバ追加とCPUスケーリングが必要となるという問題が出てきていた。
+    \item 上の問題を解決するためにshared-nothingアーキテクチャ(つまり計算とストレージの分離)を検討し、Google File System(GFS)をストレージとして利用することにした。GFSを用いて高速なクエリを実現するむずかしさはのちに説明する。
+    \item Dremelでは当初結合処理はキーでシャッフルして結合することで実装されていた。このシャッフルにはシャッフルした結果を保持する中間ストレージを必要としていたが、これはレイテンシのボトルネックとなっていた。
+    \item そこでDremelでは中間シャッフルデータをメモリに保持するようにすることでシャッフルレイテンシを削減した。
+\end{itemize}
+\end{method}
+
+\begin{method}{In Situデータ分析}
+\begin{itemize}
+    \item In situデータ分析とは事前にデータロードや変換を行わず、データをもとの場所で直接アクセスして処理することを指す。
+    \item Dremelの初期設計では明示的にデータロードが必要であったが、データをGFSに移行する過程でストレージフォーマットをオープン化した(すなわちどんなシステムでも読み書きできるようにした)。このフォーマットは自己記述型、すなわちそれを読むために必要なメタデータを同時に保持していた。これによってMapReduceジョブなどほかのシステムで生成されたデータをDremelで直接読み込めるようになった。
+    \item この方法の欠点としてはデータのガバナンスの問題とストレージレイアウトの最適化の余地が少ないことである。
+\end{itemize}
+\end{method}
+
+\begin{method}{サーバレスコンピューティング}
+\begin{itemize}
+    \item Dremelはサーバレスという概念を導入した。つまりユーザがサーバの実態を意識せずにクエリを実行できるような仕組みである。
+    \item サーバレス分析を可能にするために以下のアイデアを取り入れた。
+    \begin{itemize}
+        \item 分離: ストレージと計算を分離することで、計算の利用状況の変化に適応することが可能になった。
+        \item フォールトトレランスと再起動性: クエリ実行は計算リソースが利用不可能である可能性を前提として設計され、ワーカーは信頼できないものとみなされた。
+        \item スロットの導入: Dremelのスケジューリングロジックはスロットと呼ばれる抽象的な計算の単位で動作するように設計された。これにより具体的なマシンに依存するのではなく、計算のリソース割り当てが可能になった。
+    \end{itemize}
+    \item その他にもさまざまなクエリに対応するために以下のような工夫がある。
+    \begin{itemize}
+        \item 柔軟な実行DAG: クエリの実行計画はDremelの元論文ではツリー構造であったが、現在ではDAG構造をとれるようになり、複雑なクエリに対応できるようにした。
+        \item 動的なクエリ実行: クエリエンジンはデータの特性に応じて実行中に戦略を変更できるようになった、たとえば結合時にブロードキャストJOINを行うかハッシュJOINを行うかを実行時に収集した統計情報に基づいてクエリプランを動的に変更するようにしている。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{ネストされたデータのカラムナストレージ}
+\begin{itemize}
+    \item Dremelはネストされたデータを列ごとに保存するフォーマットを採用している。このフォーマットはParquet, ORC, Arrowなどの他のカラムナストレージフォーマットにも影響を与えた。さらにDremelの内部フォーマットはCapacitorという改良版に進化した、以下ではCapacitorについて説明する。
+    \item フィルタ処理: Capacitorではデータアクセスに直接SQL述語を評価してフィルタ処理を行うライブラリを持っている。このフィルタ処理はたとえば各列の値に関する統計情報を保持して条件を満たさないパーティションをスキップしたり、述語の並び替えをしたり、不要な条件を削除したりすることで高速化を行う。
+    \item 行の並び替え: Capacitorでは値のエンコードにRLEを用いるが、RLEは行の順番で圧縮率が異なる、そこでCapacitorではサンプリングとヒューリスティックによって行の並び替えを行い、圧縮率を向上させている。
+    \item より複雑なスキーマ: Dremelの元論文では任意の深さの再帰的なフォーマットをサポートしていなかったが、Capacitorでは任意の再帰深度をサポートするようになった。
+\end{itemize}
+\end{method}
+
+\begin{method}{ビッグデータにおけるクエリレイテンシ}
+\begin{itemize}
+    \item これまでの章で説明してきたこと(ストレージと計算の分離、InSitu分析、サーバレスコンピューティング)はクエリレイテンシを削減するのとは逆効果になる、これらを導入しても高速なクエリ処理を実現するためのいくつかの技術を導入した。
+    \begin{itemize}
+        \item 投機的実行: クエリが数百台のマシンで処理される場合、最も遅いワーカーは平均よりかなり遅くなる可能性がある。それを解決するためにクエリをできるだけ細かいタスクに分割し、各ワーカーはタスクが完了次第それを引き受ける。こうすることで遅いワーカの影響を減らした。
+        \item 近似結果: 多くの分析では正確な結果が必要ない場合もある。そこでtop-k, count-distinctを処理する近似アルゴリズムを提供する。また、遅延ワーカの影響で、データの98\%を処理された時点で結果を返すことで、レイテンシが数倍改善される。
+        \item ファイル操作の再利用: ファイル操作はファイルシステムに莫大な負荷を与える。そこでDremelではファイル操作はDAGのリーフサーバでのみ行うようにした。
+        \item その他: スタンバイサーバ、カラム指向フォーマット、動的クエリスケジューリング
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item インメモリでシャッフルをして結合処理を行うというところの意味がちょっとわからなかった。メモリにのるなら初めからそうすればよかったのではと思った。
+  \item こういうタイプの論文はあまり読んだことがなく、どういう点を学びとするのかが難しいなと思った。
+  \item BQのクエリ最適化はクエリ実行時に行われるものもあることを知り、すごいなと思った。
+  \item BQがなかったらSQLクエリで大規模データを分析できるということを信じるひとはいなかっただろうと思うので、BQの存在は偉大だと思った。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
