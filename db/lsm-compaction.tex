@@ -144,13 +144,6 @@
     \label{fig:various-compaction-strategy}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{img/lsm-compaction/target-compaction-strategy.png}
-    \caption{今回の論文で評価するコンパクション}
-    \label{fig:target-compaction-strategy}
-\end{figure}
-
 \section{実験結果}
 \begin{experiment}{実験手法}
 \begin{itemize}
@@ -175,16 +168,102 @@
 \end{itemize}
 \end{experiment}
 
-\begin{experiment}{実験結果}
+\begin{experiment}{実験結果1: コンパクションはどのようにLSMツリーのパフォーマンスに影響を与えるか?}
+実験を行ったうえでの観察(Observation)を示す。
 \begin{itemize}
-    \item 結果A.
+    \item まず、1000万件のデータを格納したときの性能を評価する。
+    \item O1: コンパクションは大規模なデータ移動を引き起こす
+    \begin{itemize}
+        \item Fullコンパクションでは元データの63倍(読み取り32倍、書き込み31倍)のデータを移動させる。
+        \item Tierのコンパクションではこれより少ないが元データの23倍のデータを移動させる。
+    \end{itemize}
+    \item O2: 部分コンパクションはデータ移動量を減らすが、コンパクション回数が増加する。
+    \begin{itemize}
+        \item 部分コンパクションの際にはコンパクション対象のファイルを適切に選ぶことで(オーバーラップが最小、削除マーカーが最多など)、データ移動量を減らせる。
+        \item コンパクション回数はしかし$L$レベルのLSMツリーにおいて、Fullに比べて$L$倍に増加する。
+    \end{itemize}
+    \item O3: Full Levelingは最も平均コンパクションレイテンシが高い。
+    \begin{itemize}
+        \item Fullコンパクションのレイテンシは部分レベル化の1.2-1.9倍、Tieringの2.1倍大きい。
+        \item ただしTieringのテールの書き込みレイテンシはティアリングで最も大きい。Fullコンパクションのレイテンシは予測しやすく、部分レベル化、Tieringのテールレイテンシは予測しづらい。
+    \end{itemize}
+    \item 次に、データのクエリ処理について評価する。1000万エントリのデータを格納した後、100万回のポイントルックアップと1000回のレンジルックアップを行う。ポイントルックアップはキーを存在しないルックアップの割合$\alpha$を$0$から$1$の間で変化させる。
+    \item O4: ポイントルックアップのレイテンシはTieringが最も高く、Full Levelingが最も低い。
+    \begin{itemize}
+        \item Tieringでの平均レイテンシはLevelingの1.1-1.9倍、キーが存在しない場合では2.2倍に達する。
+        \item またキーが存在しない場合のクエリと、存在するクエリが同割合の場合にポイントルックアップレイテンシが上昇する。
+    \end{itemize}
+    \item O5: RAはブロックキャッシュのサイズに影響され、Tieringで最も高い。
+    \begin{itemize}
+        \item Tieringでは仕組み上ツリー内のSorted runの数がおおくなるため、RAは必然的に大きくなる。
+        \item また$\alpha$が大きくなると、読み取り増幅は指数関数的に増加する。
+        \item コンパクションに応じてレンジスキャンのレイテンシはそれほど変わらない。
+    \end{itemize}
+    \item 混合ワークロードの実行: データ挿入とクエリが混在する場合の性能を評価する。
+    \item O6: 混合ワークロードではテイル書き込みレイテンシが高くなる。
+    \begin{itemize}
+        \item ポイントクエリと同時に行われるコンパクションの平均レイテンシはわずかしか影響を受けないが、テイルのレイテンシは大きく影響を受ける。
+        \item またポイントクエリとコンパクションを交互に実行することでキャッシュを温める効果がある。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/lsm-compaction/target-compaction-strategy.png}
+    \caption{今回の論文で評価するコンパクション}
+    \label{fig:target-compaction-strategy}
+\end{figure}
+
+\begin{experiment}{実験結果2: ワークロードの影響}
+次にワークロードがコンパクションに与える影響を分析する。
+\begin{itemize}
+    \item 挿入するデータの分布を変化させる、分布にはZipf分布(正確にはPrefixZipfというZipf分布の変種)、正規分布を用いて、ルックアップの分布は一様とする
+    \item O7: 挿入分布はポイントルックアップクエリ性能に影響を与える。
+    \begin{itemize}
+        \item どのコンパクション戦略でも、空でないクエリの割合にかかわらず性能差が小さい
+        \item Zipf分布では空クエリが多いワークロードを実行する際(一様分布に比べて)、すべてのコンパクション戦略が同等に高い性能を示した。
+    \end{itemize}
+    \item 挿入分布を一様に保ちながら、ポイントルックアップ分布をZipf分布および正規分布に変化させる
+    \begin{itemize}
+        \item 挿入分布はポイントルックアップに大きな影響を与える、Zipf分布のポイントルックアップを実行するとすべてのコンパクション戦略で低レイテンシとなる。これは人気のあるブロックがブロックキャッシュ内に十分収まるためである。
+    \end{itemize}
+    \item 更新と挿入の比率を変化させながら、クエリを挿入処理を交互に実行する。
+    \item O8: 更新の比率が高い場合Tieringのコンパクションレイテンシは低下し、LO+2がレベリング戦略の中で最も優れている。
+    \begin{itemize}
+        \item 更新の割合が高い場合Tieringの平均コンパクションレイテンシは大幅に減少する、これはコンパクションごとに複数の更新済みエントリを破棄できるためである。
+        \item 更新が多いワークロードではテイルコンパクションレイテンシが小さくなる、これは更新が多いとコンパクションで破棄されるエントリが多くなるためである。
+    \end{itemize}
+    \item 削除操作の影響を分析する
+    \begin{itemize}
+        \item TSA, TSDは優れた削除性能を示す。これらはTombstone密度がある閾値を超えたファイルに対してコンパクションを行うようにするからである。Tombstoneが少ないほど、RA、WAは小さくなる。
+        \item O9: 削除最適化には書き込みのコストが伴う
+        \item TSA、TSDはTombstoneを削除するがその分コンパクションによって移動されるデータ量が増加する。そのため、TSD、TSAは削除を確実かつ迅速に永続化したい場合、SAを低減したい場合に有用である。
+    \end{itemize}
+    \item 挿入データ量を増やしたときのスケーラビリティを見る
+    \item O10: TierはLeveledおよびHybrid戦略に比べてスケールしない
+    \begin{itemize}
+        \item Tier以外のコンパクション戦略においては平均コンパクションレイテンシはsub-linearにスケールする。
+        \item またTieringにおいてはテイルレイテンシが増大することが知られている。
+    \end{itemize}
+    \item エントリサイズを変化させてパフォーマンスを見る(キーサイズを固定して、値のサイズを4Bから1024Bに変化させる)
+    \item O11: エントリサイズが小さいほど、Leveledコンパクションのコストが高くなる。
+    \begin{itemize}
+        \item エントリサイズが小さいほど、1ページ当たりのエントリ数が増えるため、Bloomフィルタが大きくなり、コンパクションコストが高くなる。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{experiment}{実験結果3: LSMのチューニングの影響}
+\begin{itemize}
+    \item 
 \end{itemize}
 \end{experiment}
 
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 
+  \item 更新が多いワークロードの時にTieringが良い性能を示すというのが面白いと思った。ワークロード依存で最適なコンパクション戦略は本当に変わるのだなということが実感できた。
 \end{itemize}
 \end{kansou}
 
