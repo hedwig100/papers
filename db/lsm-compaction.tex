@@ -208,13 +208,6 @@
 \end{itemize}
 \end{experiment}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{img/lsm-compaction/target-compaction-strategy.png}
-    \caption{今回の論文で評価するコンパクション}
-    \label{fig:target-compaction-strategy}
-\end{figure}
-
 \begin{experiment}{実験結果2: ワークロードの影響}
 次にワークロードがコンパクションに与える影響を分析する。
 \begin{itemize}
@@ -254,16 +247,30 @@
 \end{itemize}
 \end{experiment}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/lsm-compaction/target-compaction-strategy.png}
+    \caption{今回の論文で評価するコンパクション}
+    \label{fig:target-compaction-strategy}
+\end{figure}
+
 \begin{experiment}{実験結果3: LSMのチューニングの影響}
+メモリバッファサイズ、ページサイズ、サイズ比といったLSMチューニングパラメータがコンパクションにどのように影響するかを分析する。
 \begin{itemize}
-    \item 
+    \item O12: Tiering方式のコンパクションはバッファサイズが大きいほどスケールする
+    \begin{itemize}
+        \item バッファサイズが大きいほどコンパクションの平均レイテンシは増加する（これはファイルが大きいほど一回のコンパクションで移動するデータ量が増えるためである）。
+        \item Tierの場合のみバッファサイズが大きくなると、テイルコンパクションレイテンシが良くスケールする。バッファサイズが64MBになると、他のコンパクション戦略より良いテイルコンパクションレイテンシを示す。
+    \end{itemize}
+    \item ページサイズの変化に対して、すべてのコンパクション戦略は同様の傾向を示す。またサイズ比、Bloomフィルタに割り当てるメモリ量など変更してもすべてのコンパクション戦略に対して同様の傾向を示した。
 \end{itemize}
 \end{experiment}
 
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 更新が多いワークロードの時にTieringが良い性能を示すというのが面白いと思った。ワークロード依存で最適なコンパクション戦略は本当に変わるのだなということが実感できた。
+    \item 更新が多いワークロードの時にTieringが良い性能を示すというのが面白いと思った。ワークロード依存で最適なコンパクション戦略は本当に変わるのだなということが実感できた。
+    \item 実際でもコンパクション戦略を選べるようなKVストアどれくらいあるのだろうと思った。自分たちのワークロードに合わせてそこをいじるのは結構ハードル高いよなと思った。
 \end{itemize}
 \end{kansou}
 
