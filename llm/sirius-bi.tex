@@ -89,33 +89,92 @@
 \section{概要}
 \begin{simplebox}
 \begin{itemize}
-    \item 概要A
-    \item 概要B
+    \item LLMを活用した実用的なBIシステム「SiriusBI」を提案する。これは以下の$3$つの主要な特徴を持つ。
+    \begin{itemize}
+        \item 複数モジュールを統合的に協調させるアーキテクチャ
+        \item 複数回の対話を通じてクエリを生成する機構
+        \item ？？
+    \end{itemize}
+    \item このサービスはTencentのプラットフォーム上で独立したサービスとして運用され、SQL生成で$93\%$以上の精度を達成し、クエリ作成時間を大幅に短縮している。
 \end{itemize}
 \end{simplebox}
 
 \section{背景}
 \begin{simplebox}
 \begin{itemize}
-    \item 背景A
-    \item 背景B
+    \item BIツールはは組織内の生データを収集、分析統合するツールから構成されている。LLMの発展により自然言語でのインターフェースでBIツールを操作することへの関心が高まっている。しかし以下のような課題が存在する。
+    \item C1: ナレッジベースやドメイン知識の統合がない、NL2SQL以外の分析タスクに対応できないなどの機能が欠如していること。
+    \item C2: NL2SQL技術では単一ラウンドでのクエリ生成に焦点をあてていて、多ラウンド対話を通じたクエリ生成ができないこと。
+    \item C3: ドメイン転移のときに、ドメイン知識が不足していて、データアノテーションを行うのも困難であること。
+    \item これらを克服するために、SiriusBIを提案する。
 \end{itemize}
 \end{simplebox}
 
 \section{手法}
-\begin{method}{Jacobi Decoding}
+\begin{method}{Knowledge Management}
 \begin{itemize}
-    \item Knowledge Management 
-    \item Multi Round Dialogue Query
-    \item SQL Generation
-    \item Data Insight
+    \item SiriusBIのナレッジベースは4種類のデータで構成される。
+    \begin{itemize}
+        \item データベースのメタデータ: スキーマ、テーブル名、カラム名
+        \item ドメイン知識: 特定のフィールドの説明、用語定義など
+        \item タスク固有の資料: タスクのために設計されたプロンプト、デモなど
+        \item 過去の対話履歴: 過去のやり取りやクエリのログなど
+    \end{itemize}
+    \item Knowledge Storage 
+    \begin{itemize}
+        \item ナレッジには依存関係があるものがあり、それはグラフで表現される、これらの関係を表現することが不可欠である。
+        \item それは祖先ラベルをつけることで表現している。「Anc.Label: ラベル, Anc.Name: 祖先の値を符号化したもの」
+    \end{itemize}
+    \item Knowledge Extraction
+    \begin{itemize}
+        \item 雑に検索してから、LLMでさらに検索するというプロセスを経る。
+        \item Coarse Retrieval: 埋め込みを利用して検索する。その差にAnc.Nameを持つようなものの場合は、祖先ノードも探索して、関連するナレッジを抽出する。
+        \item Fine Retrieval: リランキングモデルを利用して、順位付けする。SQL生成タスクの場合はLLMを利用して不要なカラムを除外する。
+    \end{itemize}
 \end{itemize}
 \end{method}
 
-\begin{method}{Lookahead Decoding}
+\begin{method}{Multi Round Dialogue Query}
+\begin{itemize}
+    \item Dialogue Analysis
+    \begin{itemize}
+        \item まずユーザのクエリと過去の問い合わせ履歴からメトリクスとディメンションを含んでいるか評価することで、意味的完全性を判定する。
+        \item メトリクスは数量的な測定値を表し、ディメンションはクエリの粒度(e.g. 期間、場所など)を定義するものである。この二つのいずれかが欠けている場合はそれを補完して次のステップへ進む。
+    \end{itemize}
+    \item Intent Querying
+    \begin{itemize}
+        \item 実際には履歴対話の情報だけでは不十分な場合が多い、この複雑さに対応するため、Intent Queryingモジュールを導入している。
+        \item まずはクエリに不足している情報があるかどうかを判定する。不足している情報がある場合はその情報をユーザに尋ね、解析プロセスを実行する。
+        \item 次に、ドメイン知識やプロンプトテンプレートなどのタスク固有資料を取得し、LLMに渡して意図明確化を誘導する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{SQL Generation}
+\begin{itemize}
+    \item Table Selection
+    \begin{itemize}
+        \item まずはCoarse Rankingを行う。テーブルを埋め込み表現に変換しておき、ユーザ入力から複数のキーワードをLLMをもちいて抽出し、それぞれ個別に検索を行う。
+        \item 次にRe-rankingを行う。Re-rankingはトークンレベルの類似度とテーブルの人気度(どのくらいそのテーブルが利用されているか)、ということに応じてスコアリングを行う。 
+        \item トークンレベルの類似度はテーブル全体をエンベディングすると消えてしまうような情報をとらえられるようにするために導入されている。
+    \end{itemize}
+    \item ドメインによってNL2SQLサンプルが少ない場合がある、このような場合に中間表現を経由することで、SQL生成の精度を向上させる。以下ではまず中間表現を用いないOne-Step SQL Generationを説明し、つぎに中間表現を用いるTwo-step SQL Generationを説明する。
+    \item One-Step SQL Generation 
+    \begin{itemize}
+        \item NL2SQLペアのデータセットを作成する、これは次のように作成する。
+        \item ユーザのSQLクエリログを収集 $\rightarrow$ LLMのプロンプトでユーザのクエリに変換 $\rightarrow$ 人手で精査してトレーニングデータセットを作る $\rightarrow$ このデータはICLの例や、データセットとしても利用される。
+        \item さらに上の方法で作ったデータセットからより多様なSQLクエリを生成し、データセットの規模と多様性を拡張する、このステップではデータセットの一部をランダムに書き換えて負例を注入する。これはトレーニングセットの$5\%$を占める。
+    \end{itemize}
+    \item Two-step SQL Generation
+    \begin{itemize}
+        \item 
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{Data Insight}
 \begin{itemize}
     \item 説明A
-    \item \cite{attention_is_all_you_need}のように引用できる.
 \end{itemize}
 \end{method}
 
@@ -136,8 +195,8 @@
 \section{感想}
 \begin{kansou}
 \begin{itemize}
-  \item 感想A
-  \item \ref{fig:template}のように図を引用することができる.
+  \item 本当に実現できているのかわからないし、テーブルの複雑さもわからないし、正解データセットの作り方もわからないが、正解率が$93\%$というのはとても高いと思う。
+  \item SQLで関連テーブルを引っ張るときにユーザ入力をそのままつかわないのはなるほどと思った。データセットの生成の仕方も勉強になった、負例をつくるのもなるほどと思った。
 \end{itemize}
 \end{kansou}
 
