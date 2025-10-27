@@ -93,7 +93,7 @@
     \begin{itemize}
         \item 複数モジュールを統合的に協調させるアーキテクチャ
         \item 複数回の対話を通じてクエリを生成する機構
-        \item ？？
+        \item OneStepもしくドメイン適応が可能なTwoStepのSQL生成モジュール
     \end{itemize}
     \item このサービスはTencentのプラットフォーム上で独立したサービスとして運用され、SQL生成で$93\%$以上の精度を達成し、クエリ作成時間を大幅に短縮している。
 \end{itemize}
@@ -109,6 +109,13 @@
     \item これらを克服するために、SiriusBIを提案する。
 \end{itemize}
 \end{simplebox}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/sirius-bi/architecture.png}
+    \caption{SiriusBIのアーキテクチャ}
+    \label{fig:siriusbi_architecture}
+\end{figure}
 
 \section{手法}
 \begin{method}{Knowledge Management}
@@ -133,6 +140,13 @@
     \end{itemize}
 \end{itemize}
 \end{method}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/sirius-bi/knowledge-base.png}
+    \caption{SiriusBIのナレッジベース}
+    \label{fig:siriusbi_knowledge_base}
+\end{figure}
 
 \begin{method}{Multi Round Dialogue Query}
 \begin{itemize}
@@ -167,28 +181,51 @@
     \end{itemize}
     \item Two-step SQL Generation
     \begin{itemize}
-        \item 
+        \item コールドスタート問題やCrossドメイン問題に対応するために2段階のSQL生成を導入する、まず第一段階では中間表現に変換する。これはユーザのクエリを精緻化することに役立つ。
+        \item つぎにコード生成能力が高いLLMを用いてSQLを生成する。
     \end{itemize}
-\end{itemize}
-\end{method}
-
-\begin{method}{Data Insight}
-\begin{itemize}
-    \item 説明A
 \end{itemize}
 \end{method}
 
 \section{実験結果}
 \begin{experiment}{実験手法}
 \begin{itemize}
-    \item 手法A.
+    \item データセット
+    \begin{itemize}
+        \item MRD-BIRDというベンチマークというベンチマークを作成した、これはMultiRoundな対話でのNL2SQLの精度を測るベンチマークである。
+        \item SRD NL2SQLというデータセットも作成した。
+    \end{itemize}
+    \item 実験対象
+    \begin{itemize}
+        \item SRD NL2SQL: 単一ラウンドでのSQL生成
+        \item MRD NL2SQL: マルチラウンドでのSQL生成
+        \item Knowledge Management: NL2SQLへの影響を評価すること、また知識検索自体の性能の評価
+        \item Data Insight: 分析リクエストに対してその分析が行えていることを評価する
+    \end{itemize}
+    \item 評価指標
+    \begin{itemize}
+        \item NL2SQLタスクではEXを利用する
+    \end{itemize}
+    \item ベースライン
+    \begin{itemize}
+        \item DIN-SQL, MAC-SQL, MRD-SQLを比較対象として用いた。
+    \end{itemize}
 \end{itemize}
 \end{experiment}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/sirius-bi/srd.png}
+    \caption{SRDデータセットでの実験結果}
+    \label{fig:siriusbi_srd_results}
+\end{figure}
+
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item 結果A
-    \item 結果B
+    \item SRDデータセットでの結果: 図\ref{fig:siriusbi_srd_results}に示す。SiriusBIはほかのベースラインを上回っている。これはSiriusBIがあいまいなフィールドや列数が多いテーブルに対処するように設計されていることに起因する。
+    \item MRDデータセットでの結果: SiriusBIはMRD用の設計されており、ほかのMRD用に設計されていない手法を大幅に精度で上回った。
+    \item 実運用環境での結果: 実際にTencentの複数の事業領域で導入し、運用を行った。このときのSQL生成制度はTencent Finance, Tencent Advertising, Tencent Cloudでそれぞれ$97\%$, $93\%$, $96\%$であった。実運用で高い精度を示した理由としてはナレッジベースのナレッジの豊富さ、データ分布とクエリの複雑性、FBによるモデルの改良があげられる。
+    \item 実際にユーザスタディでの満足度も評価した。
 \end{itemize}
 \end{experiment}
 
@@ -197,6 +234,10 @@
 \begin{itemize}
   \item 本当に実現できているのかわからないし、テーブルの複雑さもわからないし、正解データセットの作り方もわからないが、正解率が$93\%$というのはとても高いと思う。
   \item SQLで関連テーブルを引っ張るときにユーザ入力をそのままつかわないのはなるほどと思った。データセットの生成の仕方も勉強になった、負例をつくるのもなるほどと思った。
+  \item ナレッジベースの使い方はなるほどと思った、いろいろなデータを一気に検索するときにこのようなグラフ構造を表現することで検索が可能になるのだなと思った。列数が多いテーブルでの検索でめちゃめちゃ有効そう。JOINはでもどうするのだろうと思った。
+  \item 二段階でSQL生成するとドメイン間の移行がスムーズになる理由がよくわからないと思った。
+  \item 運用時の精度高すぎだけど、どうやって評価しているのだろうと思った。
+  \item 「Knowledgeベースの作り方、SQL生成の際の曖昧性をLLMに判断させてユーザに答えさせる」は参考になる。
 \end{itemize}
 \end{kansou}
 
