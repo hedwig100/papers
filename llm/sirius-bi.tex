@@ -1,0 +1,247 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{SiriusBI: A Comprehensive LLM-Powered Solution for Data Analytics in Business Intelligence}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/pvldb/vol18/p4860-xie.pdf}
+    \item Conference:
+    \item Citation:
+    \item Arxiv: \url{https://arxiv.org/abs/2411.06102}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item LLMを活用した実用的なBIシステム「SiriusBI」を提案する。これは以下の$3$つの主要な特徴を持つ。
+    \begin{itemize}
+        \item 複数モジュールを統合的に協調させるアーキテクチャ
+        \item 複数回の対話を通じてクエリを生成する機構
+        \item OneStepもしくドメイン適応が可能なTwoStepのSQL生成モジュール
+    \end{itemize}
+    \item このサービスはTencentのプラットフォーム上で独立したサービスとして運用され、SQL生成で$93\%$以上の精度を達成し、クエリ作成時間を大幅に短縮している。
+\end{itemize}
+\end{simplebox}
+
+\section{背景}
+\begin{simplebox}
+\begin{itemize}
+    \item BIツールはは組織内の生データを収集、分析統合するツールから構成されている。LLMの発展により自然言語でのインターフェースでBIツールを操作することへの関心が高まっている。しかし以下のような課題が存在する。
+    \item C1: ナレッジベースやドメイン知識の統合がない、NL2SQL以外の分析タスクに対応できないなどの機能が欠如していること。
+    \item C2: NL2SQL技術では単一ラウンドでのクエリ生成に焦点をあてていて、多ラウンド対話を通じたクエリ生成ができないこと。
+    \item C3: ドメイン転移のときに、ドメイン知識が不足していて、データアノテーションを行うのも困難であること。
+    \item これらを克服するために、SiriusBIを提案する。
+\end{itemize}
+\end{simplebox}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/sirius-bi/architecture.png}
+    \caption{SiriusBIのアーキテクチャ}
+    \label{fig:siriusbi_architecture}
+\end{figure}
+
+\section{手法}
+\begin{method}{Knowledge Management}
+\begin{itemize}
+    \item SiriusBIのナレッジベースは4種類のデータで構成される。
+    \begin{itemize}
+        \item データベースのメタデータ: スキーマ、テーブル名、カラム名
+        \item ドメイン知識: 特定のフィールドの説明、用語定義など
+        \item タスク固有の資料: タスクのために設計されたプロンプト、デモなど
+        \item 過去の対話履歴: 過去のやり取りやクエリのログなど
+    \end{itemize}
+    \item Knowledge Storage 
+    \begin{itemize}
+        \item ナレッジには依存関係があるものがあり、それはグラフで表現される、これらの関係を表現することが不可欠である。
+        \item それは祖先ラベルをつけることで表現している。「Anc.Label: ラベル, Anc.Name: 祖先の値を符号化したもの」
+    \end{itemize}
+    \item Knowledge Extraction
+    \begin{itemize}
+        \item 雑に検索してから、LLMでさらに検索するというプロセスを経る。
+        \item Coarse Retrieval: 埋め込みを利用して検索する。その差にAnc.Nameを持つようなものの場合は、祖先ノードも探索して、関連するナレッジを抽出する。
+        \item Fine Retrieval: リランキングモデルを利用して、順位付けする。SQL生成タスクの場合はLLMを利用して不要なカラムを除外する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/sirius-bi/knowledge-base.png}
+    \caption{SiriusBIのナレッジベース}
+    \label{fig:siriusbi_knowledge_base}
+\end{figure}
+
+\begin{method}{Multi Round Dialogue Query}
+\begin{itemize}
+    \item Dialogue Analysis
+    \begin{itemize}
+        \item まずユーザのクエリと過去の問い合わせ履歴からメトリクスとディメンションを含んでいるか評価することで、意味的完全性を判定する。
+        \item メトリクスは数量的な測定値を表し、ディメンションはクエリの粒度(e.g. 期間、場所など)を定義するものである。この二つのいずれかが欠けている場合はそれを補完して次のステップへ進む。
+    \end{itemize}
+    \item Intent Querying
+    \begin{itemize}
+        \item 実際には履歴対話の情報だけでは不十分な場合が多い、この複雑さに対応するため、Intent Queryingモジュールを導入している。
+        \item まずはクエリに不足している情報があるかどうかを判定する。不足している情報がある場合はその情報をユーザに尋ね、解析プロセスを実行する。
+        \item 次に、ドメイン知識やプロンプトテンプレートなどのタスク固有資料を取得し、LLMに渡して意図明確化を誘導する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{SQL Generation}
+\begin{itemize}
+    \item Table Selection
+    \begin{itemize}
+        \item まずはCoarse Rankingを行う。テーブルを埋め込み表現に変換しておき、ユーザ入力から複数のキーワードをLLMをもちいて抽出し、それぞれ個別に検索を行う。
+        \item 次にRe-rankingを行う。Re-rankingはトークンレベルの類似度とテーブルの人気度(どのくらいそのテーブルが利用されているか)、ということに応じてスコアリングを行う。 
+        \item トークンレベルの類似度はテーブル全体をエンベディングすると消えてしまうような情報をとらえられるようにするために導入されている。
+    \end{itemize}
+    \item ドメインによってNL2SQLサンプルが少ない場合がある、このような場合に中間表現を経由することで、SQL生成の精度を向上させる。以下ではまず中間表現を用いないOne-Step SQL Generationを説明し、つぎに中間表現を用いるTwo-step SQL Generationを説明する。
+    \item One-Step SQL Generation 
+    \begin{itemize}
+        \item NL2SQLペアのデータセットを作成する、これは次のように作成する。
+        \item ユーザのSQLクエリログを収集 $\rightarrow$ LLMのプロンプトでユーザのクエリに変換 $\rightarrow$ 人手で精査してトレーニングデータセットを作る $\rightarrow$ このデータはICLの例や、データセットとしても利用される。
+        \item さらに上の方法で作ったデータセットからより多様なSQLクエリを生成し、データセットの規模と多様性を拡張する、このステップではデータセットの一部をランダムに書き換えて負例を注入する。これはトレーニングセットの$5\%$を占める。
+    \end{itemize}
+    \item Two-step SQL Generation
+    \begin{itemize}
+        \item コールドスタート問題やCrossドメイン問題に対応するために2段階のSQL生成を導入する、まず第一段階では中間表現に変換する。これはユーザのクエリを精緻化することに役立つ。
+        \item つぎにコード生成能力が高いLLMを用いてSQLを生成する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item データセット
+    \begin{itemize}
+        \item MRD-BIRDというベンチマークというベンチマークを作成した、これはMultiRoundな対話でのNL2SQLの精度を測るベンチマークである。
+        \item SRD NL2SQLというデータセットも作成した。
+    \end{itemize}
+    \item 実験対象
+    \begin{itemize}
+        \item SRD NL2SQL: 単一ラウンドでのSQL生成
+        \item MRD NL2SQL: マルチラウンドでのSQL生成
+        \item Knowledge Management: NL2SQLへの影響を評価すること、また知識検索自体の性能の評価
+        \item Data Insight: 分析リクエストに対してその分析が行えていることを評価する
+    \end{itemize}
+    \item 評価指標
+    \begin{itemize}
+        \item NL2SQLタスクではEXを利用する
+    \end{itemize}
+    \item ベースライン
+    \begin{itemize}
+        \item DIN-SQL, MAC-SQL, MRD-SQLを比較対象として用いた。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/sirius-bi/srd.png}
+    \caption{SRDデータセットでの実験結果}
+    \label{fig:siriusbi_srd_results}
+\end{figure}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item SRDデータセットでの結果: 図\ref{fig:siriusbi_srd_results}に示す。SiriusBIはほかのベースラインを上回っている。これはSiriusBIがあいまいなフィールドや列数が多いテーブルに対処するように設計されていることに起因する。
+    \item MRDデータセットでの結果: SiriusBIはMRD用の設計されており、ほかのMRD用に設計されていない手法を大幅に精度で上回った。
+    \item 実運用環境での結果: 実際にTencentの複数の事業領域で導入し、運用を行った。このときのSQL生成制度はTencent Finance, Tencent Advertising, Tencent Cloudでそれぞれ$97\%$, $93\%$, $96\%$であった。実運用で高い精度を示した理由としてはナレッジベースのナレッジの豊富さ、データ分布とクエリの複雑性、FBによるモデルの改良があげられる。
+    \item 実際にユーザスタディでの満足度も評価した。
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item 本当に実現できているのかわからないし、テーブルの複雑さもわからないし、正解データセットの作り方もわからないが、正解率が$93\%$というのはとても高いと思う。
+  \item SQLで関連テーブルを引っ張るときにユーザ入力をそのままつかわないのはなるほどと思った。データセットの生成の仕方も勉強になった、負例をつくるのもなるほどと思った。
+  \item ナレッジベースの使い方はなるほどと思った、いろいろなデータを一気に検索するときにこのようなグラフ構造を表現することで検索が可能になるのだなと思った。列数が多いテーブルでの検索でめちゃめちゃ有効そう。JOINはでもどうするのだろうと思った。
+  \item 二段階でSQL生成するとドメイン間の移行がスムーズになる理由がよくわからないと思った。
+  \item 運用時の精度高すぎだけど、どうやって評価しているのだろうと思った。
+  \item 「Knowledgeベースの作り方、SQL生成の際の曖昧性をLLMに判断させてユーザに答えさせる」は参考になる。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
