@@ -1,0 +1,167 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{OmniSQL: Synthesizing High-quality Text-to-SQL Data at Scale}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/pvldb/vol18/p4695-li.pdf}
+    \item Conference: VLDB 2025
+    \item Citation:
+    \item Arxiv: \url{https://arxiv.org/abs/2503.02240}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item Text2SQLタスクにおいてはクローズドモデルを使ってプロンプトで性能向上を図るか、QAデータセットを作成してオープンモデルをファインチューニングすることで性能向上を図ることができる。
+    \item 本論文では、後者のアプローチに注目し、大規模な高品質Text2SQLデータセットを合成する手法を提案する。
+    \item このデータセットを作成し、それをオープンソースのText2SQLモデルを作成した。このモデル(OmniSQL)は、既存のオープンソースモデルやクローズドモデルと同等もしくはそれ以上の性能を示した。
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{データ合成フレームワーク}
+\begin{itemize}
+    \item 説明A
+    \item 説明B
+\end{itemize}
+\end{method}
+
+\begin{method}{データ合成フレームワークで作成したSQLの統計情報}
+\begin{itemize}
+    \item .
+\end{itemize}
+\end{method}
+
+\begin{method}{OmniSQL: Text2SQLモデル}
+\begin{itemize}
+    \item テーブルスキーマ生成
+    \begin{itemize}
+        \item Web上にある表形式データから、「テーブル名、テーブルの説明、列名、列のデータ型、列の説明、例示データ」を生成する。
+        \item 上のように生成したテーブルは単純すぎる傾向があり、また主キーなどのリレーションが不完全であることがあるため、テーブルに関連する列を追加することでスキーマ定義の一貫性を改善する。
+    \end{itemize}
+    \item SQLクエリ生成
+    \begin{itemize}
+        \item SQLクエリをLLMで生成するが、大規模なLLMは過度に複雑なクエリを生成する傾向があるため、クエリのレベルを設定し、指定されたレベルに対応するSQLクエリを生成するようLLMに指示する。具体的には「タスク指示、スキーマ、SQL関数、データベースの値、SQLの複雑性、アウトプットのカラムの数」を与えてSQLを生成させる。
+        \item そのあとに生成されたクエリのうちSELECTクエリのみ抽出して実行し、成功するもののみを採用する。
+    \end{itemize}
+    \item SQLクエリから自然言語の質問文生成を行う
+    \begin{itemize}
+        \item 
+    \end{itemize}
+    \item CoT解法の生成
+    \begin{itemize}
+        \item 
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item 手法A.
+\end{itemize}
+\end{experiment}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item 結果A
+    \item 結果B
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item 感想A
+  \item \ref{fig:template}のように図を引用することができる.
+\end{itemize}
+\end{kansou}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/image.png}
+    \caption{キャプション}
+    \label{fig:template}
+\end{figure}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
