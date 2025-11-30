@@ -1,0 +1,199 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{OmniSQL: Synthesizing High-quality Text-to-SQL Data at Scale}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/pvldb/vol18/p4695-li.pdf}
+    \item Conference: VLDB 2025
+    \item Citation:
+    \item Arxiv: \url{https://arxiv.org/abs/2503.02240}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item Text2SQLタスクにおいてはクローズドモデルを使ってプロンプトで性能向上を図るか、QAデータセットを作成してオープンモデルをファインチューニングすることで性能向上を図ることができる。
+    \item 本論文では、後者のアプローチに注目し、大規模な高品質Text2SQLデータセットを合成する手法を提案する。
+    \item このデータセットを作成し、それをオープンソースのText2SQLモデルを作成した。このモデル(OmniSQL)は、既存のオープンソースモデルやクローズドモデルと同等もしくはそれ以上の性能を示した。
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{データ合成フレームワーク}
+\begin{itemize}
+    \item テーブルスキーマ生成
+    \begin{itemize}
+        \item Web上にある表形式データから、「テーブル名、テーブルの説明、列名、列のデータ型、列の説明、例示データ」を生成する。
+        \item 上のように生成したテーブルは単純すぎる傾向があり、また主キーなどのリレーションが不完全であることがあるため、テーブルに関連する列を追加することでスキーマ定義の一貫性を改善する。
+    \end{itemize}
+    \item SQLクエリ生成
+    \begin{itemize}
+        \item SQLクエリをLLMで生成するが、大規模なLLMは過度に複雑なクエリを生成する傾向があるため、クエリのレベルを設定し、指定されたレベルに対応するSQLクエリを生成するようLLMに指示する。具体的には「タスク指示、スキーマ、SQL関数、データベースの値、SQLの複雑性、アウトプットのカラムの数」を与えてSQLを生成させる。
+        \item そのあとに生成されたクエリのうちSELECTクエリのみ抽出して実行し、成功するもののみを採用する。
+    \end{itemize}
+    \item SQLクエリから自然言語の質問文生成を行う
+    \begin{itemize}
+        \item SQLクエリを入力としてそれに対応する自然言語の質問文を生成します。
+        \item ここでは、意味的な一貫性だけではなく言語的多様性を重視し「形式的、曖昧に、日常的な表現」など様々なスタイルで質問文を生成するようにした。具体的には「formal, colloquial, imperative, interrogative, descriptive, concise, vague, metaphorical, conversational」の9つのスタイルで生成するようにした。
+    \end{itemize}
+    \item CoT解法の生成
+    \begin{itemize}
+        \item 自然言語での質問とSQLクエリのペアに対して、CoT解法を生成する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/omni-sql/overall-statistics.png}
+    \caption{SynSQL-2.5Mデータセットの統計情報}
+    \label{fig:synsql-stats}
+\end{figure}
+
+\begin{method}{SynSQL-2.5M: データ合成フレームワークで作成したデータセット}
+\begin{itemize}
+    \item 上で示した手法を用いて、Web上の表形式データから2.5M件のText2SQLデータセットを合成した。
+    \item 統計情報
+    \begin{itemize}
+        \item 作成したデータセットの統計情報は図\ref{fig:synsql-stats}に示す通りである。DBの数、SQLクエリの数がほかのデータセットと比較しても多いことがわかる。
+        \item またドメイン、SQLの複雑性、質問文の多様性などの観点で見てもほかのデータセットと比べて高品質なデータセットであることがわかる。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{OmniSQL: SynSQL-2.5MでファインチューニングしたText2SQLモデル}
+\begin{itemize}
+    \item SynSQL-2.5MとSpider, BIRDを用いてOmniSQLというText2SQLモデルを作成した。
+    \item 入力には「テーブルスキーマ、テーブルディスクリプション、カラムの代表値、自然言語での質問」が含まれ、出力には「CoT解法と結果のSQL」設定し、これを推論するように学習させた。
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item データセット
+    \begin{itemize}
+        \item 標準ベンチマークとしてSpider, BIRDを用いる。
+        \item チャレンジングなベンチマークとしてSpider2.0を用いる。
+        \item ロバストネスを評価するためのベンチマークとしてSpider-DK, Spider-Synを用いる。これは列を曖昧な言葉で置き換えたりすることで実際にユーザ質問を模倣したデータセットである。
+    \end{itemize}
+    \item 評価指標: EX, TS(テストスイート用データベースが用意されている場合)
+    \item 比較対象モデル
+    \begin{itemize}
+        \item クローズドモデル: GPT-4o-mini-2024-07-18, GPT-4o-2024-11-20, GPT-4-Turbo-2024-04-09
+        \item オープンモデル: Deepseek-V3, Deepseek Coder, Qwen2.5, e.t.c.
+    \end{itemize}
+    \item 推論設定: Greedy decodingとサンプリングの両方を用いる。
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/omni-sql/result.png}
+    \caption{実験結果}
+    \label{fig:experiment-result}
+\end{figure}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item 実験結果は図\ref{fig:experiment-result}に示す。
+    \item 主な知見としては以下のようなものがある。
+    \begin{itemize}
+        \item OmniSQLは事前学習前のQwen2.5-Coder系より精度向上し、とくに標準ベンチマークのSpider testで$87.9\%$の精度を達成する、これはDAIL-SQL + GPT-4 + Self-Consistencyの公開最高値の$86.6\%$を$1.3\%$上回る。
+        \item Spider2.0-SQLite, SciencBenchmarkなどの特定ドメインに特化したベンチマークにおいても性能を示す、つまり幅広いデータベースで学習しているため一般化能力に優れる。
+        \item Spider-DKではOmniSQLがベースモデルに劣った、その原因はSpider-DKが暗黙的な知識を要求するため、広範な一般コーパスで学習したベースモデルが有利であることが理由と考えられる。
+    \end{itemize}
+    \item 追加実験としてSynSQL-2.5Mを除外してのチューニング、CoTなしでのチューニングなど行ったがいずれもSynSQL-2.5Mの有効性を示す結果だった。
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item 完全にLLMでデータを作成することでも精度向上に寄与できるのだと思った、データの品質をきちんと管理してかつ大量のデータを作ることができることが大事なのだと思った。
+  \item それでも人の手でのラベルよりは(おそらく?)質が落ちると思うが、それは圧倒的な量でカバーできるのかなと思った。
+  \item 訓練データのための生成というだけではなくてテストデータの作成の手法として用いることはできるのかなと思った、正確性などの観点から。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
