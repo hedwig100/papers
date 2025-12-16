@@ -1,0 +1,213 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{TailorSQL: An NL2SQL System Tailored to Your Query Workload}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://www.vldb.org/2025/Workshops/VLDB-Workshops-2025/AIDB/AIDB25_2.pdf}
+    \item Conference: VLDB2025
+    \item Arxiv: \url{https://arxiv.org/abs/2505.23039}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item NL2SQLタスクにおいて過去に実行されたSQLクエリログの履歴からテーブルの結合条件や、曖昧なカラム名がつけられたカラムの意味を推測することで精度を向上させる方法を提案した。
+    \item 具体的には過去のSQLクエリログから「結合条件、フィルターでよく利用される句、Group Byでよく利用される句」の三つをクエリヒントとして取得し、これを従来も利用されていたスキーマ関連の文書と合わせてプロンプトに追加することで精度を向上させた。
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{全体ワークフロー}
+\begin{itemize}
+    \item ワークフローはオフラインパイプラインとランタイムパイプラインの2つからなる。
+    \item オフラインパイプライン
+    \begin{itemize}
+        \item 文書生成: クエリログからクエリヒント情報を抽出する
+        \item 埋め込み生成: スキーマ文書、クエリヒント文書に対して固定長の埋め込みを生成する。
+    \end{itemize}
+    \item ランタイムパイプライン
+    \begin{itemize}
+        \item 文書検索: ユーザの質問の埋め込みを生成し、オフラインパイプラインで生成した埋め込みと比較して類似度の高い文書を取得する。オフライン分析で決定されたトークン制限をそれぞれの文書に適応してプロンプトに組み込む。
+        \item SQL生成: プロンプトを用いてSQLを生成する。
+        \item 棄権ポリシー: ワークロードのパターンが変化していた場合に性能が低下することを防ぐため、バンディットに基づいて汎用的なNL2SQLパイプラインにフォールバックするかどうかを決定する。
+    \end{itemize}
+\end{itemize}
+\end{method}
+
+\begin{method}{ドキュメントの構成とプロンプトへの組み込み}
+\begin{itemize}
+    \item ドキュメントを次の2種類に分けて保存する
+    \item 1. スキーマ文書
+    \begin{itemize}
+        \item 従来も利用されていたようなスキーマ情報(テーブル名、カラム名、データ型、プライマリーキー、外部キーなど)を含む。
+        \item テーブル文書とカラム文書に分割して保存する。カラム文書ではカラム名、テーブル名に加えてそのカラムで頻繁に出現する値のサンプルが含まれる。
+    \end{itemize}
+    \item 2. クエリヒント文書
+    \begin{itemize}
+        \item 以下の3つのヒントを過去のログから収集し、数が多いものを保存する
+        \item 1. 結合条件ヒント: クエリで利用されるテーブルのセットと、テーブル間の結合条件を抽出する。
+        \item 2. フィルターヒント: WHERE句で利用されるカラムとその抽出条件を持つ。
+        \item 3. グループ化ヒント: GROUP BY句で利用されるカラムをもつテーブル名を含む文書を作成する。
+    \end{itemize}
+    \item 埋め込みは$E_\mathrm{raw}$(文書そのものの埋め込み)以外にも$E_{synthQ}$など、過去のSQLクエリからLLMを使用して生成された合成ユーザの埋め込みを平均したものなどを足し合わせて計算され、類似度検索に利用される。
+    \item 各文書クラスごとにトークン制限が設定され、文書ごとにトークン制限に達するまでプロンプトに組み込まれる。
+\end{itemize}
+\end{method}
+
+\begin{method}{棄権ポリシー}
+\begin{itemize}
+    \item 上で説明した特化型パイプラインと汎用的なパイプラインを持ち、ユーザからのFBに基づいて確率的にどちらのパイプラインを利用するかをバンディットアルゴリズムで選択する。
+    \item これはログをもとにした特化型パイプラインがワークロードの変化により性能が低下することを防ぐためである。
+\end{itemize}
+\end{method}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item ベンチマークデータセット
+    \begin{itemize}
+        \item Bird-Union: BIRDベンチマークのdevセットのテーブルを結合した単一データベースで、71テーブルと1200組のNL2SQLの質問-SQLペアを含む。セマンティクスが複雑なテーブル名、カラム名、質問を含むため、難易度が高い。
+        \item Spider-Union: SPIDERベンチマークのdevセットのテーブルを結合した単一データベースで、221テーブルと480組のNL2SQLの質問-SQLペアを含む。Bird-UnionやFIBENと比較して難易度は低い。
+        \item FIBEN: 152テーブルと300組のNL2SQLの質問-SQLペアを含む単一データベース。複雑なクエリ（ネストされたクエリ、複数のテーブルの結合など）が多く、難易度が高い。
+    \end{itemize}
+    \item クエリログとテストデータセットの分離
+    \begin{itemize}
+        \item 質問-SQLペアを、過去のクエリログをシミュレートするクエリログ（訓練）セットと、将来のユーザー質問をシミュレートするテストセットに分割した,。
+        \item ランダム分割: 質問-SQLペアをランダムに分割し、テストセットがクエリログと同じ分布を反映するようにした（TailorSQLの利点を示すのに理想的）。
+        \item 非重複分割: クエリログとテストセットのSQLクエリが同じテーブルにアクセスしないように分割し、ユーザー質問がクエリログと完全に異なる分布を持つ「ワークロードドリフト」の状況を強調した。
+        \item すべての実験で、質問-SQLペアの半分がクエリログに、残りの半分がテストセットに割り当てられた。
+    \end{itemize}
+    \item 評価指標
+    \begin{itemize}
+        \item 実行精度 (Execution Accuracy, EX): NL2SQLによって生成されたSQLクエリの実行結果が、正解のSQLクエリの実行結果と一致する質問-SQLペアの割合。
+        \item レイテンシ (Latency): 関連文書の検索とLLMの呼び出しを含む、e2eな呼び出しにかかる時間。これの大部分はLLM呼び出しで、これは入力トークン数に依存するため、入力トークン数が大事になる。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/tailor-sql/exp.png}
+    \caption{実験結果}
+    \label{fig:acc-vs-complexity}
+\end{figure}
+
+\begin{experiment}{実験結果}
+\begin{itemize}
+    \item 実行精度
+    \begin{itemize}
+        \item TailorSQLは、Spider-Unionで$68.3\%$、Bird-Unionで$44.9\%$、FIBENで$52.67\%$、ベースラインよりも高い実行精度を達成した。
+        \item 特にFIBENは、複雑なクエリや曖昧なスキーマ項目が多いため、クエリヒントとテーラーされた埋め込みの恩恵が大きく、最も大きな精度向上が見られた。
+    \end{itemize}
+    \item レイテンシ
+    \begin{itemize}
+        \item TailorSQLは、ベースラインと比較してSQL生成のレイテンシを2〜4倍改善した。
+        \item TailorSQLは、ベースラインが最高の精度を達成した際と比較して、Spider-Unionで1.8倍、Bird-Unionで15倍、FIBENで1.9倍少ないトークン数で同等以上の精度を達成した。
+    \end{itemize}
+    \item 埋め込みの詳細分析
+    \begin{itemize}
+        \item TailorSQLの埋め込みはdocument検索のrecallを大幅に改善した。
+        \item 合成質問の重要性
+        \begin{itemize}
+            \item テーラーされた埋め込みの構成要素のうち、関連する過去のSQLクエリからLLMを使用して生成された合成ユーザー質問（$\text{E}_{\text{synthQ}}$）に基づく埋め込みが最も重要であることがわかった。
+            \item これはユーザ質問を用いて検索するため、合成質問が意味的に近いことが原因と考えられる。
+        \end{itemize}
+    \end{itemize}
+    \item ワークロード変化へのロバスト性
+    \begin{itemize}
+        \item 棄権ポリシーの実験では、質問の前半をランダム分割（過去のクエリと類似）、後半を非重複分割（過去のクエリと非類似＝ドリフト）で実行した。
+        \item 棄権ポリシーは、ワークロードドリフトが検出された中盤で、特化されたTailorSQLパイプラインから汎用パイプラインを利用するようになった。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+  \item ログデータからデータ抽出して利用できるのは良さそう。
+  \item 実際には実際にクエリを書いている人は全員プロなわけではないので、ログは汚すぎて使えない＋ログが多すぎるのでまず初めに適切にフィルタしないといけないみたいな問題がありそうと思った。
+  \item 過去のクエリとか使っているので、SOTAな戦略に匹敵するくらいの精度を出してほしいという気がしたが、そこまでめちゃくちゃ効くというわけではないのだと思った。FIBENでめっちゃ聞いているのは現実のユースケースでは結構効きそうという気がした。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
