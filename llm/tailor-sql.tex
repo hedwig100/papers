@@ -138,16 +138,57 @@
 \end{itemize}
 \end{method}
 
+
 \section{実験結果}
 \begin{experiment}{実験手法}
 \begin{itemize}
-    \item 
+    \item ベンチマークデータセット
+    \begin{itemize}
+        \item Bird-Union: BIRDベンチマークのdevセットのテーブルを結合した単一データベースで、71テーブルと1200組のNL2SQLの質問-SQLペアを含む。セマンティクスが複雑なテーブル名、カラム名、質問を含むため、難易度が高い。
+        \item Spider-Union: SPIDERベンチマークのdevセットのテーブルを結合した単一データベースで、221テーブルと480組のNL2SQLの質問-SQLペアを含む。Bird-UnionやFIBENと比較して難易度は低い。
+        \item FIBEN: 152テーブルと300組のNL2SQLの質問-SQLペアを含む単一データベース。複雑なクエリ（ネストされたクエリ、複数のテーブルの結合など）が多く、難易度が高い。
+    \end{itemize}
+    \item クエリログとテストデータセットの分離
+    \begin{itemize}
+        \item 質問-SQLペアを、過去のクエリログをシミュレートするクエリログ（訓練）セットと、将来のユーザー質問をシミュレートするテストセットに分割した,。
+        \item ランダム分割: 質問-SQLペアをランダムに分割し、テストセットがクエリログと同じ分布を反映するようにした（TailorSQLの利点を示すのに理想的）。
+        \item 非重複分割: クエリログとテストセットのSQLクエリが同じテーブルにアクセスしないように分割し、ユーザー質問がクエリログと完全に異なる分布を持つ「ワークロードドリフト」の状況を強調した。
+        \item すべての実験で、質問-SQLペアの半分がクエリログに、残りの半分がテストセットに割り当てられた。
+    \end{itemize}
+    \item 評価指標
+    \begin{itemize}
+        \item 実行精度 (Execution Accuracy, EX): NL2SQLによって生成されたSQLクエリの実行結果が、正解のSQLクエリの実行結果と一致する質問-SQLペアの割合。
+        \item レイテンシ (Latency): 関連文書の検索とLLMの呼び出しを含む、e2eな呼び出しにかかる時間。これの大部分はLLM呼び出しで、これは入力トークン数に依存するため、入力トークン数が大事になる。
+    \end{itemize}
 \end{itemize}
 \end{experiment}
 
 \begin{experiment}{実験結果}
 \begin{itemize}
-    \item 
+    \item 実行精度
+    \begin{itemize}
+        \item TailorSQLは、Spider-Unionで$68.3\%$、Bird-Unionで$44.9\%$、FIBENで$52.67\%$、ベースラインよりも高い実行精度を達成した。
+        \item 特にFIBENは、複雑なクエリや曖昧なスキーマ項目が多いため、クエリヒントとテーラーされた埋め込みの恩恵が大きく、最も大きな精度向上が見られた。
+    \end{itemize}
+    \item レイテンシ
+    \begin{itemize}
+        \item TailorSQLは、ベースラインと比較してSQL生成のレイテンシを2〜4倍改善した。
+        \item TailorSQLは、ベースラインが最高の精度を達成した際と比較して、Spider-Unionで1.8倍、Bird-Unionで15倍、FIBENで1.9倍少ないトークン数で同等以上の精度を達成した。
+    \end{itemize}
+    \item 埋め込みの詳細分析
+    \begin{itemize}
+        \item TailorSQLの埋め込みはdocument検索のrecallを大幅に改善した。
+        \item 合成質問の重要性
+        \begin{itemize}
+            \item テーラーされた埋め込みの構成要素のうち、関連する過去のSQLクエリからLLMを使用して生成された合成ユーザー質問（$\text{E}_{\text{synthQ}}$）に基づく埋め込みが最も重要であることがわかった。
+            \item これはユーザ質問を用いて検索するため、合成質問が意味的に近いことが原因と考えられる。
+        \end{itemize}
+    \end{itemize}
+    \item ワークロード変化へのロバスト性
+    \begin{itemize}
+        \item 棄権ポリシーの実験では、質問の前半をランダム分割（過去のクエリと類似）、後半を非重複分割（過去のクエリと非類似＝ドリフト）で実行した。
+        \item 棄権ポリシーは、ワークロードドリフトが検出された中盤で、特化されたTailorSQLパイプラインから汎用パイプラインを利用するようになった。
+    \end{itemize}
 \end{itemize}
 \end{experiment}
 
@@ -156,6 +197,7 @@
 \begin{itemize}
   \item ログデータからデータ抽出して利用できるのは良さそう。
   \item 実際には実際にクエリを書いている人は全員プロなわけではないので、ログは汚すぎて使えない＋ログが多すぎるのでまず初めに適切にフィルタしないといけないみたいな問題がありそうと思った。
+  \item 過去のクエリとか使っているので、SOTAな戦略に匹敵するくらいの精度を出してほしいという気がしたが、そこまでめちゃくちゃ効くというわけではないのだと思った。FIBENでめっちゃ聞いているのは現実のユースケースでは結構効きそうという気がした。
 \end{itemize}
 \end{kansou}
 
