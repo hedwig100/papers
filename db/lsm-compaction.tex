@@ -1,0 +1,280 @@
+\documentclass[dvipdfmx,uplatex]{jsarticle}
+
+%% Packages
+\usepackage{graphicx,color,hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{lscape}
+\usepackage{mathtools}
+\usepackage{here}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{pxjahyper}
+
+%% Theorem Styles
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命題}
+\newtheorem{cor}{系}
+\newtheorem{definition}{定義}
+\newtheorem{problem}{問題}
+\theoremstyle{remark}
+\newtheorem{remark}{注意}
+\newtheorem{requirement}{条件}
+
+%% Environment (Colorful Box)
+\newenvironment{simplebox}{
+    \begin{tcolorbox}[
+        fonttitle=\bfseries,
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{method}[1]{
+    \begin{tcolorbox}[
+        colframe=green!50!black,
+        colback=green!50!black!10!white,
+        colbacktitle=green!50!black!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{experiment}[1]{
+    \begin{tcolorbox}[
+        colframe=violet,
+        colback=violet!10!white,
+        colbacktitle=violet!40!white,
+        coltitle=black,
+        fonttitle=\bfseries,
+        title={#1}
+    ]
+}{
+    \end{tcolorbox}
+}
+
+\newenvironment{kansou}{
+    \begin{tcolorbox}[
+        colframe=brown,
+        colback=brown!10!white,
+        colbacktitle=brown!40!white,
+        coltitle=black,fonttitle=\bfseries
+    ]
+}{
+    \end{tcolorbox}
+}
+
+%% Title
+\title{Constructing and Analyzing the LSM Compaction Design Space}
+\author{\empty}
+\date{\empty}
+
+%% Document body
+\begin{document}
+\maketitle
+
+\begin{itemize}
+    \item Link: \url{https://vldb.org/pvldb/vol14/p2216-sarkar.pdf}
+    \item Conference: PVLDB 2021
+    \item Arxiv: \url{https://arxiv.org/abs/2202.04522}
+\end{itemize}
+
+\section{概要}
+\begin{simplebox}
+\begin{itemize}
+    \item LSMツリーはコンパクションを行うことでデータの圧縮処理を行うが、コンパクションはLSMツリーのパフォーマンスに大きな影響を与えるコンポーネントである。
+    \item しかしながらLSMツリーのコンパクション設計は多くの場合ブラックボックスであり、その実装はあまり形式化されていない。本論文では、LSMツリーのコンパクション設計空間を形式化し、それらを評価する。
+\end{itemize}
+\end{simplebox}
+
+\section{手法}
+\begin{method}{コンパクションの設計空間}
+\begin{itemize}
+    \item コンパクションの設計空間を次の観点で分類する。
+    \begin{itemize}
+        \item コンパクショントリガー: いつコンパクションを開始するか
+        \item データレイアウト: ストレージ上でデータをどのように配置するのか
+        \item コンパクション粒度: コンパクションのときに一度にどれくらいのデータを移動させるか
+        \item データ移動ポリシー: コンパクションのとき、どのデータを移動させるか?
+    \end{itemize}
+    \item コンパクショントリガーの例としては以下のようなものがある。
+    \begin{itemize}
+        \item あるレベルの飽和度(合計格納データバイト数/そのレベルの理論上の最大容量)が閾値を超えたときにコンパクションを開始する。
+        \item あるレベル内のrunが一定数を超えるとコンパクションを開始する。
+        \item あるファイルがそのレベル内に存在する時間がある閾値を超えるとコンパクションを開始する。
+        \item Tombstoneを含むファイルができてから一定時間が経過したときにコンパクションを開始する。
+    \end{itemize}
+    \item データレイアウトはあるレベルでのランの数をどのように制御するかという観点で分類できる。
+    \begin{itemize}
+        \item Leveling: 各レベルで重複するキーを持つファイルは存在しないようにする、すなわちレベル$i$でコンパクションが発動すると、レベル$i+1$のファイルとマージされて、レベル$i+1$のファイルに書き戻される。
+        \item Tiering: 各レベルに重複するキーをもつファイルが存在できる、すなわちレベル$i$でコンパクションが発動すると、そのレベルのすべてのランをマージして、レベル$i+1$に書き戻す。
+        \item Hybrid: あるレベルではLevelingを、別のレベルではTieringを採用するような方式。
+    \end{itemize}
+    \item コンパクション粒度
+    \begin{itemize}
+        \item Level: 隣接する二つのレベル$i, i+1$のデータをすべてマージして、レベル$i+1$に書きこむ。
+        \item Sorted runs: あるレベル$i$のすべてのランをマージして次のレベル$i+1$に書きこむ。
+        \item Sorted file: あるレベル$i$の一つのファイルをレベル$i+1$にマージして書き込む。
+        \item Several sorted files: あるレベル$i$のいくつかのファイルをマージしてレベル$i+1$に書き込む。
+    \end{itemize}
+    \item データ移動ポリシーは部分コンパクション(特定ファイルのみマージする)を行うときにどのファイルを選ぶかという戦略である。
+    \begin{itemize}
+        \item Round-robin: ラウンドロビンでファイルを選ぶ
+        \item Least overlapping parent: 親レベルとのキー重複が最も少ないファイルを選ぶ
+        \item Least overlapping grandparent: 祖父レベルとのキー重複が最も少ないファイルを選ぶ
+        \item Coldest: 最も最近アクセスされていないファイルを選ぶ
+        \item Oldest: 最も古いファイルを選ぶ
+        \item Tombstone density: Tombstoneの数が閾値を超えるファイルを選ぶ
+        \item Tombstone-TTL: Tombstoneができてからある一定時間が経過したファイルを選ぶ
+    \end{itemize}
+    \item 上の4つの観点を組みあわせることで様々なコンパクション手法を表現できる。既存システムにおけるコンパクションの分類は図\ref{fig:various-compaction-strategy}に示す。今回の論文では10種類の代表的なコンパクション戦略を決め、それらを評価する。10種類のコンパクション戦略は図\ref{fig:target-compaction-strategy}に示す。
+\end{itemize}
+\end{method}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{img/lsm-compaction/various-compaction-strategy.png}
+    \caption{既存システムにおけるコンパクションの分類}
+    \label{fig:various-compaction-strategy}
+\end{figure}
+
+\section{実験結果}
+\begin{experiment}{実験手法}
+\begin{itemize}
+    \item 実験においてはRocksDBを用いて、様々なコンパクション戦略を実装した。RocksDBはオープンソースであり、学術界でよく利用されている。
+    \item 性能評価指標としては以下を用いた。
+    \begin{itemize}
+        \item コンパクションレイテンシ: 一回のコンパクション処理全体にかかる時間
+        \item ライトアンプリフィケーション(WA): データが生存期間中にディスクに書き込まれる回数
+        \item ライトレイテンシ: 書き込み処理にかかる時間
+        \item リードアンプリフィケーション (RA): 理想的に読むべきページ数に対する、実際にディスクから読みこまれたページ数の比
+        \item ポイントルックアップレイテンシ: キーを指定して値を取得する処理にかかる時間
+        \item レンジルックアップレイテンシ: 範囲を指定して値を取得する処理にかかる時間
+        \item スペースアンプリフィケーション (SA): 論理的に無効化されたエントリのサイズをツリー内のエントリサイズで割った比として定義される。
+        \item 削除性能: 指定された時間内に論理削除されたエントリを物理削除できる割合
+    \end{itemize}
+    \item 評価に用いたワークロードは以下
+    \begin{itemize}
+        \item データ分布は一様分布、正規分布、Zipf分布
+        \item ポイントルックアップでは対象キーがデータベースに存在する場合としない場合、レンジルックアップは選択率で特徴づけられる。上の二つの条件を変えながら評価を行った。
+    \end{itemize}
+    \item また以下のLSMチューニングパラメータは適切に調節した。それはメモリバッファサイズ、ブロックキャッシュサイズ、ツリーのサイズ比の三つである。
+\end{itemize}
+\end{experiment}
+
+\begin{experiment}{実験結果1: コンパクションはどのようにLSMツリーのパフォーマンスに影響を与えるか?}
+実験を行ったうえでの観察(Observation)を示す。
+\begin{itemize}
+    \item まず、1000万件のデータを格納したときの性能を評価する。
+    \item O1: コンパクションは大規模なデータ移動を引き起こす
+    \begin{itemize}
+        \item Fullコンパクションでは元データの63倍(読み取り32倍、書き込み31倍)のデータを移動させる。
+        \item Tierのコンパクションではこれより少ないが元データの23倍のデータを移動させる。
+    \end{itemize}
+    \item O2: 部分コンパクションはデータ移動量を減らすが、コンパクション回数が増加する。
+    \begin{itemize}
+        \item 部分コンパクションの際にはコンパクション対象のファイルを適切に選ぶことで(オーバーラップが最小、削除マーカーが最多など)、データ移動量を減らせる。
+        \item コンパクション回数はしかし$L$レベルのLSMツリーにおいて、Fullに比べて$L$倍に増加する。
+    \end{itemize}
+    \item O3: Full Levelingは最も平均コンパクションレイテンシが高い。
+    \begin{itemize}
+        \item Fullコンパクションのレイテンシは部分レベル化の1.2-1.9倍、Tieringの2.1倍大きい。
+        \item ただしTieringのテールの書き込みレイテンシはティアリングで最も大きい。Fullコンパクションのレイテンシは予測しやすく、部分レベル化、Tieringのテールレイテンシは予測しづらい。
+    \end{itemize}
+    \item 次に、データのクエリ処理について評価する。1000万エントリのデータを格納した後、100万回のポイントルックアップと1000回のレンジルックアップを行う。ポイントルックアップはキーを存在しないルックアップの割合$\alpha$を$0$から$1$の間で変化させる。
+    \item O4: ポイントルックアップのレイテンシはTieringが最も高く、Full Levelingが最も低い。
+    \begin{itemize}
+        \item Tieringでの平均レイテンシはLevelingの1.1-1.9倍、キーが存在しない場合では2.2倍に達する。
+        \item またキーが存在しない場合のクエリと、存在するクエリが同割合の場合にポイントルックアップレイテンシが上昇する。
+    \end{itemize}
+    \item O5: RAはブロックキャッシュのサイズに影響され、Tieringで最も高い。
+    \begin{itemize}
+        \item Tieringでは仕組み上ツリー内のSorted runの数がおおくなるため、RAは必然的に大きくなる。
+        \item また$\alpha$が大きくなると、読み取り増幅は指数関数的に増加する。
+        \item コンパクションに応じてレンジスキャンのレイテンシはそれほど変わらない。
+    \end{itemize}
+    \item 混合ワークロードの実行: データ挿入とクエリが混在する場合の性能を評価する。
+    \item O6: 混合ワークロードではテイル書き込みレイテンシが高くなる。
+    \begin{itemize}
+        \item ポイントクエリと同時に行われるコンパクションの平均レイテンシはわずかしか影響を受けないが、テイルのレイテンシは大きく影響を受ける。
+        \item またポイントクエリとコンパクションを交互に実行することでキャッシュを温める効果がある。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{experiment}{実験結果2: ワークロードの影響}
+次にワークロードがコンパクションに与える影響を分析する。
+\begin{itemize}
+    \item 挿入するデータの分布を変化させる、分布にはZipf分布(正確にはPrefixZipfというZipf分布の変種)、正規分布を用いて、ルックアップの分布は一様とする
+    \item O7: 挿入分布はポイントルックアップクエリ性能に影響を与える。
+    \begin{itemize}
+        \item どのコンパクション戦略でも、空でないクエリの割合にかかわらず性能差が小さい
+        \item Zipf分布では空クエリが多いワークロードを実行する際(一様分布に比べて)、すべてのコンパクション戦略が同等に高い性能を示した。
+    \end{itemize}
+    \item 挿入分布を一様に保ちながら、ポイントルックアップ分布をZipf分布および正規分布に変化させる
+    \begin{itemize}
+        \item 挿入分布はポイントルックアップに大きな影響を与える、Zipf分布のポイントルックアップを実行するとすべてのコンパクション戦略で低レイテンシとなる。これは人気のあるブロックがブロックキャッシュ内に十分収まるためである。
+    \end{itemize}
+    \item 更新と挿入の比率を変化させながら、クエリを挿入処理を交互に実行する。
+    \item O8: 更新の比率が高い場合Tieringのコンパクションレイテンシは低下し、LO+2がレベリング戦略の中で最も優れている。
+    \begin{itemize}
+        \item 更新の割合が高い場合Tieringの平均コンパクションレイテンシは大幅に減少する、これはコンパクションごとに複数の更新済みエントリを破棄できるためである。
+        \item 更新が多いワークロードではテイルコンパクションレイテンシが小さくなる、これは更新が多いとコンパクションで破棄されるエントリが多くなるためである。
+    \end{itemize}
+    \item 削除操作の影響を分析する
+    \begin{itemize}
+        \item TSA, TSDは優れた削除性能を示す。これらはTombstone密度がある閾値を超えたファイルに対してコンパクションを行うようにするからである。Tombstoneが少ないほど、RA、WAは小さくなる。
+        \item O9: 削除最適化には書き込みのコストが伴う
+        \item TSA、TSDはTombstoneを削除するがその分コンパクションによって移動されるデータ量が増加する。そのため、TSD、TSAは削除を確実かつ迅速に永続化したい場合、SAを低減したい場合に有用である。
+    \end{itemize}
+    \item 挿入データ量を増やしたときのスケーラビリティを見る
+    \item O10: TierはLeveledおよびHybrid戦略に比べてスケールしない
+    \begin{itemize}
+        \item Tier以外のコンパクション戦略においては平均コンパクションレイテンシはsub-linearにスケールする。
+        \item またTieringにおいてはテイルレイテンシが増大することが知られている。
+    \end{itemize}
+    \item エントリサイズを変化させてパフォーマンスを見る(キーサイズを固定して、値のサイズを4Bから1024Bに変化させる)
+    \item O11: エントリサイズが小さいほど、Leveledコンパクションのコストが高くなる。
+    \begin{itemize}
+        \item エントリサイズが小さいほど、1ページ当たりのエントリ数が増えるため、Bloomフィルタが大きくなり、コンパクションコストが高くなる。
+    \end{itemize}
+\end{itemize}
+\end{experiment}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/lsm-compaction/target-compaction-strategy.png}
+    \caption{今回の論文で評価するコンパクション}
+    \label{fig:target-compaction-strategy}
+\end{figure}
+
+\begin{experiment}{実験結果3: LSMのチューニングの影響}
+メモリバッファサイズ、ページサイズ、サイズ比といったLSMチューニングパラメータがコンパクションにどのように影響するかを分析する。
+\begin{itemize}
+    \item O12: Tiering方式のコンパクションはバッファサイズが大きいほどスケールする
+    \begin{itemize}
+        \item バッファサイズが大きいほどコンパクションの平均レイテンシは増加する（これはファイルが大きいほど一回のコンパクションで移動するデータ量が増えるためである）。
+        \item Tierの場合のみバッファサイズが大きくなると、テイルコンパクションレイテンシが良くスケールする。バッファサイズが64MBになると、他のコンパクション戦略より良いテイルコンパクションレイテンシを示す。
+    \end{itemize}
+    \item ページサイズの変化に対して、すべてのコンパクション戦略は同様の傾向を示す。またサイズ比、Bloomフィルタに割り当てるメモリ量など変更してもすべてのコンパクション戦略に対して同様の傾向を示した。
+\end{itemize}
+\end{experiment}
+
+\section{感想}
+\begin{kansou}
+\begin{itemize}
+    \item 更新が多いワークロードの時にTieringが良い性能を示すというのが面白いと思った。ワークロード依存で最適なコンパクション戦略は本当に変わるのだなということが実感できた。
+    \item 実際でもコンパクション戦略を選べるようなKVストアはどれくらいあるのだろうと思った。自分たちのワークロードに合わせてそこをいじるのは結構ハードル高いよなと思った。
+\end{itemize}
+\end{kansou}
+
+\bibliographystyle{jplain}
+\bibliography{template.bib}
+
+\end{document}
